@@ -346,15 +346,16 @@ print('============================================')
 print('\t\t\tPlotting data...\t\t\t')
 print('============================================')
 
-# a, b = input("Enter colormap limits: ").split(',')
-# print("First number is {} and second number is {}".format(a, b))
-# cmap_lim = (float(a), float(b))
+a, b = input("Enter colormap limits: ").split(',')
+print("First number is {} and second number is {}".format(a, b))
+cmap_lim = (float(a), float(b))
 
-# title_str = 'CERES Terra CRS Ed4' + ' ' + date_str
+title_str = 'CERES Terra CRS Ed4' + ' ' + date_str
 
-title_str = r'Difference ($\Delta$) between CERES Terra CRS Ed4 - Ed2G' + ' for ' + date_str
+#title_str = r'Difference ($\Delta$) between CERES Terra CRS Ed4 - Ed2G' + ' for ' + date_str
 
 plot_ssf_swath(nrows=1, ncols=1, cen_lon=0, field=difference,
                varname=var1, levname=lev1, varunits=units1,
-               cmap=colormap, cmap_lims=(-50,50), date=date,
+               cmap=colormap, cmap_lims=cmap_lim, date=date,
                nightshade=1, title_str=title_str)
+
