@@ -41,7 +41,7 @@ print('\t\t\tDefining function...\t\t\t')
 print('============================================')
 
 
-def read_ssf_geolocation(file_path):
+def read_crs_geolocation(file_path):
     """Reads geolocation info from file"""
 
     from pyhdf import SD
@@ -66,7 +66,7 @@ print('\t\t\tDefining function...\t\t\t')
 print('============================================')
 
 
-def select_var(file_path, vararg, levarg, fill):
+def select_crs_var(file_path, vararg, levarg, fill):
     """Select variable and vertical level from official
     CERES CRS HDF file.
 
@@ -139,7 +139,7 @@ print('\t\t\tDefining function...\t\t\t')
 print('============================================')
 
 
-def select_var2(file_path, vararg, levarg, fill):
+def select_crs_var2(file_path, vararg, levarg, fill):
     """
     Select field variable at desired vertical level from
     official release CERES CRS HDF file.
@@ -315,14 +315,14 @@ print('============================================')
 print('\t\t\tReading geolocation...\t\t\t')
 print('============================================')
 
-lat, lon, p_levels, time_obs = read_ssf_geolocation(file_path=file_path1)
+lat, lon, p_levels, time_obs = read_crs_geolocation(file_path=file_path1)
 
 print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1, lev1 = select_var(file_path=file_path1, vararg=0, levarg=4, fill=0)
-field2, var2, units2, lev2 = select_var2(file_path=file_path2, vararg=0, levarg=1, fill=0)
+field1, var1, units1, lev1 = select_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=0)
+field2, var2, units2, lev2 = select_crs_var2(file_path=file_path2, vararg=0, levarg=1, fill=0)
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
