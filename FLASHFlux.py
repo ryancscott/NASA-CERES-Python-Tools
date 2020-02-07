@@ -66,15 +66,15 @@ print('\t\t\tDefining function...\t\t\t')
 print('============================================')
 
 
-def select_ssf_var(file_path, vararg, fill):
-    """Select variable and vertical level from official
-    CERES CRS HDF file.
+def read_ssf_var(file_path, vararg, fill):
+    """
+    Read CERES SSF footprint variable
 
-    Function arguments:
-
-    (1) file_path = path to file
-    (2) vararg = variable argument and
-    (3) levarg = level argument"""
+    :param file_path: path to file
+    :param vararg: variable argument
+    :param fill: fill option
+    :return: field, name, units
+    """
 
     from pyhdf import SD
     hdf = SD.SD(file_path)
@@ -114,14 +114,16 @@ def get_date(file):
 
     time_str = file[-10:]
     print(time_str)
-    yyyy = int(time_str[0:4])
-    mm = int(time_str[4:6])
-    dd = int(time_str[6:8])
-    hr = int(time_str[8:10])
+    yyyy = time_str[0:4]
+    mm = time_str[4:6]
+    dd = time_str[6:8]
+    hr = time_str[8:10]
 
-    date = datetime.datetime(yyyy, mm, dd, hr)
+    date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
 
-    return date, time_str
+    date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
+
+    return date, date_str
 
 
 print('============================================')
@@ -277,7 +279,7 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' ' + date_str, fontsize=10)
         ax.set_extent([-180, 180, -90, 90], projection)
-        ax.text(0.5, -0.1, varname + ' - ' + levname + ' \n' + varunits, va='bottom', ha='center',
+        ax.text(0.5, -0.1, varname + ' - ' + ' \n' + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
 
         if nightshade == 1:
@@ -311,8 +313,7 @@ print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1 = select_ssf_var(file_path=file_path1, vararg=2, fill=1)
-# field2, var2, units2, lev2 = select_var2(file_path=file_path2, vararg=0, levarg=1, fill=0)
+field1, var1, units1 = read_ssf_var(file_path=file_path1, vararg=3, fill=1)
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
@@ -340,12 +341,12 @@ a, b = input("Enter colormap limits: ").split(',')
 print("First number is {} and second number is {}".format(a, b))
 cmap_lim = (float(a), float(b))
 
-title_str = 'CERES FLASHFlux Ed3C'
+title_str = 'CERES FLASHFlux Edition 3C' + ' -'
 
 # title_str = r'Difference ($\Delta$) between CERES Terra CRS Ed4 - Ed2G' + ' for ' + date_str
 
 plot_ssf_swath(nrows=1, ncols=1, cen_lon=0, field=field1,
-               varname=var1, levname="surface", varunits=units1,
+               varname=var1, levname="", varunits=units1,
                cmap=colormap, cmap_lims=cmap_lim, date=date,
                nightshade=1, title_str=title_str)
 

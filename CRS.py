@@ -129,14 +129,16 @@ def get_date(file):
 
     time_str = file[-10:]
     print(time_str)
-    yyyy = int(time_str[0:4])
-    mm = int(time_str[4:6])
-    dd = int(time_str[6:8])
-    hr = int(time_str[8:10])
+    yyyy = time_str[0:4]
+    mm = time_str[4:6]
+    dd = time_str[6:8]
+    hr = time_str[8:10]
 
-    date = datetime.datetime(yyyy, mm, dd, hr)
+    date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
 
-    return date, time_str
+    date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
+
+    return date, date_str
 
 
 print('============================================')
@@ -290,7 +292,7 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
     for i, ax in enumerate(axgr):
         ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none', edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
-        ax.set_title(title_str + date_str, fontsize=10)
+        ax.set_title(title_str + ' - ' + date_str, fontsize=10)
         ax.set_extent([-180, 180, -90, 90], projection)
         ax.text(0.5, -0.1, varname + ' - ' + levname + ' \n' + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
@@ -326,7 +328,7 @@ print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1, lev1 = select_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=0)
+field1, var1, units1, lev1 = select_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
 field2, var2, units2, lev2 = select_crs_var2(file_path=file_path2, vararg=0, levarg=1, fill=0)
 
 print('============================================')
@@ -355,11 +357,11 @@ a, b = input("Enter colormap limits: ").split(',')
 print("Specified colormap range [{}, {}]".format(a, b))
 cmap_lim = (float(a), float(b))
 
-title_str = 'CERES Terra CRS Ed4' + ' ' + date_str
+title_str = 'CERES Terra CRS Ed4'
 
 #title_str = r'Difference ($\Delta$) between CERES Terra CRS Ed4 - Ed2G' + ' for ' + date_str
 
-plot_ssf_swath(nrows=1, ncols=1, cen_lon=0, field=difference,
+plot_ssf_swath(nrows=1, ncols=1, cen_lon=0, field=field1,
                varname=var1, levname=lev1, varunits=units1,
                cmap=colormap, cmap_lims=cmap_lim, date=date,
                nightshade=1, title_str=title_str)
