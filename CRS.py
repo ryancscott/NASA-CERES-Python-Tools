@@ -42,7 +42,12 @@ print('============================================')
 
 
 def read_crs_geolocation(file_path):
-    """Reads geolocation info from file"""
+    """
+    Reads geolocation information from file
+    :param file_path: file to be read
+    :return: lat/lon of each FOV, pressure levels, and
+    the time of each observation
+    """
 
     from pyhdf import SD
     hdf = SD.SD(file_path)
@@ -269,7 +274,7 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
 
-    # Creat figure
+    # Create figure
     fig = plt.figure(figsize=(10, 6.5))
     axgr = AxesGrid(fig, 111, axes_class=axes_class,
                     nrows_ncols=(nrows, ncols),
@@ -347,7 +352,7 @@ print('\t\t\tPlotting data...\t\t\t')
 print('============================================')
 
 a, b = input("Enter colormap limits: ").split(',')
-print("First number is {} and second number is {}".format(a, b))
+print("Specified colormap range [{}, {}]".format(a, b))
 cmap_lim = (float(a), float(b))
 
 title_str = 'CERES Terra CRS Ed4' + ' ' + date_str
