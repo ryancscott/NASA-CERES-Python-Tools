@@ -56,10 +56,13 @@ def read_crs_geolocation(file_path):
     colatitude = hdf.select('Colatitude of CERES FOV at surface')
     colat = colatitude.get()
     fov_lat = 90 - colat
+
     longitude = hdf.select('Longitude of CERES FOV at surface')
     fov_lon = longitude.get()
+
     pressure_levels = hdf.select('Pressure levels')
     pres_lev = pressure_levels.get()
+
     time_of_obs = hdf.select("Time of observation")
     time_obs = time_of_obs.get()
 
@@ -72,8 +75,8 @@ print('============================================')
 
 
 def select_crs_var(file_path, vararg, levarg, fill):
-    """Select variable and vertical level from official
-    CERES CRS HDF file.
+    """Select field at appropriate vertical level
+    from the official CERES CRS HDF file.
 
     Function arguments:
 
@@ -148,8 +151,8 @@ print('============================================')
 
 def select_crs_var2(file_path, vararg, levarg, fill):
     """
-    Select field variable at desired vertical level from
-    official release CERES CRS HDF file.
+    Select field at desired vertical level from
+    my run of the CERES CRS4 code.
 
     Function arguments:
 
@@ -300,7 +303,7 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
         if nightshade == 1:
             ax.add_feature(Nightshade(date, alpha=0.15))
 
-    # To use a different colorbar range every time, use a tuple
+    # To use a different colorbar range every time, use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
         im = axgr[i].scatter(lon, lat, c=field, s=1, transform=ccrs.PlateCarree(),

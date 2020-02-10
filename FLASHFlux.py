@@ -217,14 +217,14 @@ def set_colormap(cmap_name, typarg):
     print("\tConstructing", switch.get(typarg, "N/A"), "colormap")
 
     if typarg == 0:
-        c_map = cmap_name.mpl_colormap
+        col_map = cmap_name.mpl_colormap
     elif typarg == 1:
         from matplotlib.colors import ListedColormap
-        c_map = ListedColormap(cmap_name.mpl_colors)
+        col_map = ListedColormap(cmap_name.mpl_colors)
     elif typarg != 1 or typarg != 0:
         print('Please select 0 or 1')
 
-    return c_map
+    return col_map
 
 
 print('============================================')
@@ -279,7 +279,7 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' ' + date_str, fontsize=10)
         ax.set_extent([-180, 180, -90, 90], projection)
-        ax.text(0.5, -0.1, varname + ' - ' + ' \n' + varunits, va='bottom', ha='center',
+        ax.text(0.5, -0.1, varname + ' \n' + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
 
         if nightshade == 1:
