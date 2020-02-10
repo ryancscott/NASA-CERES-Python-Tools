@@ -28,7 +28,7 @@ file = 'CERES_EBAF-TOA_Ed4.1_Subset_200003-201910.nc'
 file_path = path + file
 
 
-#========================================================================
+# ========================================================================
 
 
 def print_nc_file_info(filepath):
@@ -46,16 +46,16 @@ def print_nc_file_info(filepath):
 
     from netCDF4 import Dataset
 
-    nc = Dataset(filepath,'r')
+    nc = Dataset(filepath, 'r')
     # print information about variables in netCDF file
     for i in nc.variables:
-        print (i,'-',nc.variables[i].units,'-',nc.variables[i].shape)
+        print(i, '-', nc.variables[i].units, '-', nc.variables[i].shape)
 
     print('\n')
     return
 
 
-#========================================================================
+# ========================================================================
 
 
 def read_ebaf_geolocation(filepath):
@@ -71,7 +71,7 @@ def read_ebaf_geolocation(filepath):
 
     from netCDF4 import Dataset
 
-    nc = Dataset(filepath,'r')
+    nc = Dataset(filepath, 'r')
 
     latitude = nc.variables['lat'][:]
     longitude = nc.variables['lon'][:]
@@ -87,10 +87,10 @@ def read_ebaf_geolocation(filepath):
     return latitude, longitude, lat, lon
 
 
-#========================================================================
+# ========================================================================
 
 
-def read_ebaf_var(filepath,variable):
+def read_ebaf_var(filepath, variable):
     """
     Extract variable data from EBAF file
     :param filepath: input EBAF file
@@ -100,7 +100,7 @@ def read_ebaf_var(filepath,variable):
 
     from netCDF4 import Dataset
 
-    nc = Dataset(filepath,'r')
+    nc = Dataset(filepath, 'r')
 
     var = nc.variables[variable]
     var_units = var.units
@@ -112,14 +112,14 @@ def read_ebaf_var(filepath,variable):
     return var, var_name, var_units
 
 
-#========================================================================
+# ========================================================================
 
 
 def compute_monthly_anomalies(field):
     """
-    Compute calendar month averages, i.e., the monthly mean seasonal cycle,
-    and then subtract them from the raw fields to obtain monthly anomalies
-    :param field: variable to compute monthly climatology, anomaly
+    Compute average for each calendar month, i.e., the monthly mean seasonal cycle,
+    and then subtract the long-term means from the raw fields to get monthly anomalies
+    :param field: variable to compute the climatology/anomaly for
     :return:
     (1) time series of monthly anomalies
     (2) monthly mean seasonal cycle
@@ -129,44 +129,43 @@ def compute_monthly_anomalies(field):
     record_len = field.shape[0]
 
     # initialize array to hold monthly climatology for each month
-    monthly_climatology = np.empty((12,180,360))
-
+    monthly_climatology = np.empty((12, 180, 360))
 
     print('Indices for monthly climatology:\n')
     # loop over each calendar month and average
-    for i in range(0,12):
+    for i in range(0, 12):
 
         # select appropriate indices associated with each month
-        indices = list(range(i,record_len,12))
+        indices = list(range(i,record_len, 12))
 
-        print(indices,"Total number of indices used:",len(indices))
+        print(indices, "Total number of indices used:", len(indices))
 
         # average using appropriate indices
-        monthly_climatology[i,:,:] = np.nanmean(field[indices,:,:],axis=0)
+        monthly_climatology[i, :, :] = np.nanmean(field[indices, :, :], axis=0)
 
     print('\nComputing # of times to repeat seasonal cycle:\n')
     # compute number of times to repeat seasonal cycle
     i = 0
-    numyr = 0
+    num_yr = 0
     while i < record_len:
         i += 12
-        numyr += 1
-        print(i, numyr)
+        num_yr += 1
+        print(i, num_yr)
 
     # repeat 20 times
-    seasonal_cycle = np.tile(monthly_climatology, (numyr, 1, 1))
+    seasonal_cycle = np.tile(monthly_climatology, (num_yr, 1, 1))
 
-    # only take data up to last index
+    # only take data up to the last index
     seasonal_cycle = seasonal_cycle[0:record_len, :, :]
 
     # calculate anomalies
     monthly_anomalies = np.subtract(field, seasonal_cycle)
 
     r = 100
-    p = 100
+    p = 120
     fig, (ax1, ax2) = plt.subplots(2, 1)
     # first set of axes
-    ax1.plot(np.linspace(0, 0, 236))
+    ax1.plot(np.linspace(0, 0, record_len))
     ax1.plot(monthly_anomalies[:, r, p], label='Anomalies')
     ax1.legend(fontsize=10)
     # second set of axes
@@ -177,7 +176,7 @@ def compute_monthly_anomalies(field):
     return monthly_anomalies, seasonal_cycle
 
 
-#========================================================================
+# ========================================================================
 
 
 # def get_date(file):
@@ -202,7 +201,7 @@ def compute_monthly_anomalies(field):
 #     return date, date_str
 
 
-#========================================================================
+# ========================================================================
 
 
 def cos_lat_weight(lat_vector):
@@ -215,92 +214,92 @@ def cos_lat_weight(lat_vector):
     # compute cos(lat in degrees to radians)
     weight = np.cos(np.deg2rad(lat_vector))
     print('w array shape...')
-    print(weight.shape,'\n')
+    print(weight.shape, '\n')
 
     # replicate cos(lat) vector 360 times along long dim
-    weight = np.matlib.repmat(weight,360,1)
+    weight = np.matlib.repmat(weight, 360, 1)
 
     # transpose to be consistent with other fields
     weight = np.transpose(weight)
 
     print('cos(lat) weight array shape...')
-    print(weight.shape,'\n')
+    print(weight.shape, '\n')
 
-    #plt.imshow(weight)
+    plt.imshow(weight)
 
     return weight
 
 
-#========================================================================
+# ========================================================================
 
 
 def compute_climatology(field):
     """
     Compute mean and standard deviation of field
-    :param field: field to be averaged
-    :return: mean and standard deviation
+    :param field: field under consideration
+    :return: the mean and standard deviation
     """
 
     # average over entire time series
-    mean_field = np.nanmean(field,axis=0)
+    mean_field = np.nanmean(field, axis=0)
 
     # standard deviation over entire time series
-    stdv_field = np.nanstd(field,axis=0)
+    stdv_field = np.nanstd(field, axis=0)
 
     return mean_field, stdv_field
 
 
-#========================================================================
+# ========================================================================
 
 
 def compute_regional_averages(field):
     """
-    Computes weighted regional average of field
+    Computes weighted regional averages of input field
     :param field: field to be averaged
     :return: prints regional averages
     """
 
     # Global mean climatological total cloud fraction
     global_avg = np.average(field, weights=w)
-    print('\n','Global average:',global_avg,'\n')
+    print('\n', 'Global average:', global_avg, '\n')
 
     # 60Sto90S mean climatological total cloud fraction
-    sh60to90_avg = np.average(field[0:30,:], weights=w[0:30,:])
-    print('Antarctic (60S-90S) average:',sh60to90_avg)
-    print('Latitude range:',latitude[0:30],'\n')
+    sh60to90_avg = np.average(field[0:30, :], weights=w[0:30, :])
+    print('Antarctic (60S-90S) average:', sh60to90_avg)
+    print('Latitude range:', latitude[0:30], '\n')
 
     # SH mid-latitude climatological total cloud fraction
-    sh30to60_avg = np.average(field[30:60,:], weights=w[30:60,:])
-    print('S mid-latitude (30S-60S) average:',sh30to60_avg)
-    print('Latitude range:',latitude[30:60],'\n')
+    sh30to60_avg = np.average(field[30:60, :], weights=w[30:60, :])
+    print('S mid-latitude (30S-60S) average:', sh30to60_avg)
+    print('Latitude range:', latitude[30:60], '\n')
 
     # SH tropical mean climatology
-    sh0to30_avg = np.average(field[60:90,:], weights=w[60:90,:])
-    print('S tropical (30S-0) average:',sh0to30_avg)
-    print('Latitude range:',latitude[60:90],'\n')
+    sh0to30_avg = np.average(field[60:90, :], weights=w[60:90, :])
+    print('S tropical (30S-0) average:', sh0to30_avg)
+    print('Latitude range:', latitude[60:90], '\n')
 
     # NH tropical mean climatological total cloud fraction
-    nh0to30_avg = np.average(field[90:120,:], weights=w[90:120,:])
-    print('N tropical (0-30N) average:',nh0to30_avg)
-    print('Latitude range:',latitude[90:120],'\n')
+    nh0to30_avg = np.average(field[90:120, :], weights=w[90:120, :])
+    print('N tropical (0-30N) average:', nh0to30_avg)
+    print('Latitude range:', latitude[90:120], '\n')
 
     # NH tropical mean climatological total cloud fraction
-    nh30to60_avg = np.average(field[120:150,:], weights=w[120:150,:])
-    print('N mid-latitude (30N-60N) average:',nh30to60_avg)
-    print('Latitude range:',latitude[120:150],'\n')
+    nh30to60_avg = np.average(field[120:150, :], weights=w[120:150, :])
+    print('N mid-latitude (30N-60N) average:', nh30to60_avg)
+    print('Latitude range:', latitude[120:150], '\n')
 
     # Arctic mean climatological total cloud fraction
-    nh60to90_avg = np.average(field[150:180,:], weights=w[150:180,:])
-    print('Arctic 60N-90N average:',nh60to90_avg)
-    print('Latitude range:',latitude[150:180],'\n')
+    nh60to90_avg = np.average(field[150:180, :], weights=w[150:180, :])
+    print('Arctic 60N-90N average:', nh60to90_avg)
+    print('Latitude range:', latitude[150:180], '\n')
 
     return sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg
 
 
-#========================================================================
+# ========================================================================
 
 
-def composite_diff(field,ind1,ind2):
+def composite_diff(field, ind1, ind2):
     """
     Calculates composite means and then takes
     their difference to illustrate change between
@@ -310,21 +309,21 @@ def composite_diff(field,ind1,ind2):
     :param ind2: indices for second time period
     :return: difference between composites
     """
-    mean_field1 = np.nanmean(field[ind1,:,:],axis=0)
-    #print('Size of first section to average: ',field[ind1,:,:].shape)
+    mean_field1 = np.nanmean(field[ind1, :, :], axis=0)
+    print('Size of first section to average: ', field[ind1, :, :].shape)
 
-    mean_field2 = np.nanmean(field[ind2,:,:,],axis=0)
-    #print('Size of second section to average: ',field[ind2,:,:].shape)
+    mean_field2 = np.nanmean(field[ind2, :, :], axis=0)
+    print('Size of second section to average: ', field[ind2, :, :].shape)
 
     composite_diff = np.subtract(mean_field2, mean_field1)
 
     return composite_diff
 
 
-#========================================================================
+# ========================================================================
 
 
-def set_colormap(cmap_name,argument):
+def set_colormap(cmap_name, argument):
     """Sets colormap to be used for mapping geospatial data. Inputs include the
      colormap name from palettable, 0/1 for continuous/discrete colormap, and
      an optional number of colors for the discrete case"""
@@ -332,7 +331,7 @@ def set_colormap(cmap_name,argument):
         0: "continuous",
         1: "discrete"
     }
-    print("Constructing", switch.get(argument,"NO") ,"colormap")
+    print("\nUsing", switch.get(argument, "NO"), "colormap")
 
     if argument == 0:
         color_map = cmap_name.mpl_colormap
@@ -343,7 +342,7 @@ def set_colormap(cmap_name,argument):
     return color_map
 
 
-#========================================================================
+# ========================================================================
 
 
 def global_map(nrows, ncols, cen_lon,
@@ -351,8 +350,7 @@ def global_map(nrows, ncols, cen_lon,
                 cmap, cmap_lims, ti_str):
 
     # Map projection
-    cenlon = cen_lon
-    projection = ccrs.PlateCarree(central_longitude=cenlon)
+    projection = ccrs.PlateCarree(central_longitude=cen_lon)
 
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
@@ -371,13 +369,12 @@ def global_map(nrows, ncols, cen_lon,
 
     for i, ax in enumerate(axgr):
         ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',edgecolor='grey')
-        #ax.add_feature(cartopy.feature.GSHHSFeature('low',edgecolor='none'), zorder=1, facecolor='black')
+        # ax.add_feature(cartopy.feature.GSHHSFeature('low',edgecolor='none'), zorder=1, facecolor='black')
         ax.gridlines(color='black', linestyle=':')
         ax.set_title(ti_str)
         ax.set_extent([-180, 180, -90, 90], projection)
         ax.text(0.5, -0.15, varname + ' \n' + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
-
 
     # Use a different colorbar range every time by specifying tuple of tuples
     limits=cmap_lims
@@ -405,7 +402,7 @@ latitude, _, lat, lon = read_ebaf_geolocation(filepath=file_path)
 w = cos_lat_weight(latitude)
 
 # read variable including its name and units
-field, name, units = read_ebaf_var(filepath=file_path,variable='toa_lw_all_mon')
+field, name, units = read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
 
 # compute the long-term mean and standard deviation
 mean_field, stdv_field = compute_climatology(field)
@@ -417,11 +414,10 @@ compute_regional_averages(mean_field)
 monthly_anomalies, seasonal_cycle = compute_monthly_anomalies(field)
 
 # set the colormap
-cmap = set_colormap(Balance_19,0)
+cmap = set_colormap(Balance_19, 0)
 
 # plot global map
-global_map(nrows=1, ncols=1, cen_lon = 180, field = monthly_anomalies[100,:,:],
-           varname = name, varunits = units, cmap = cmap,
-           cmap_lims = (-30,30), ti_str = 'CERES Energy Balanced and Filled')
-
+global_map(nrows=1, ncols=1, cen_lon=180, field=monthly_anomalies[100, :, :],
+           varname=name, varunits=units, cmap=cmap,
+           cmap_lims=(-30, 30), ti_str='CERES-EBAF Ed4.1')
 

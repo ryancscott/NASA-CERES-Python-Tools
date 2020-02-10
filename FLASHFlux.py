@@ -214,7 +214,7 @@ def set_colormap(cmap_name, typarg):
         0: "continuous",
         1: "discrete"
     }
-    print("\tConstructing", switch.get(typarg, "N/A"), "colormap")
+    print("\nUsing", switch.get(typarg, "N/A"), "colormap")
 
     if typarg == 0:
         col_map = cmap_name.mpl_colormap
