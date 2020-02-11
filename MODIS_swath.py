@@ -6,6 +6,7 @@ import cartopy
 import cartopy.crs as ccrs
 import shapely.geometry as sgeom
 import cartopy.feature
+import cartopy.io.img_tiles as cimgt
 from cartopy.mpl.geoaxes import GeoAxes
 from cartopy.feature.nightshade import Nightshade
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
@@ -154,7 +155,7 @@ def set_colormap(cmap_name, argument):
 # ========================================================================
 
 
-def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dlatlon, title):
+def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dlatlon, title, inset):
 
     print('\nPlot limits:')
     min_lon = np.min(lon)-dlatlon
@@ -169,13 +170,13 @@ def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dla
     cen_lon = (min_lon+max_lon)/2
     print("Central longitude: ", cen_lon)
 
-    # Map projection
+    # map projection
     projection = ccrs.PlateCarree()
 
-    # Axis class
+    # axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
 
-    # Plot figure
+    # plot figure
     fig = plt.figure(figsize=(8, 6.5))
     axgr = AxesGrid(fig, 111, axes_class=axes_class,
                 nrows_ncols=(nrows, ncols),
@@ -187,8 +188,12 @@ def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dla
                 cbar_size='5%',
                 label_mode=1)
 
+    stamen_terrain = cimgt.Stamen('terrain-background')
+
     for i, ax in enumerate(axgr):
-        ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='none'), zorder=0, facecolor='black')
+        ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='black'), zorder=0, facecolor='none')
+        #ax.stock_img()
+        ax.add_image(stamen_terrain, 8)
         ax.gridlines(color='black', linestyle=':')
         ax.set_title(title, fontsize=10)
         ax.set_extent([min_lon, max_lon, min_lat, max_lat], projection)
@@ -202,19 +207,20 @@ def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dla
 
     # colorbar axis ticks and labels
     for i, cax in enumerate(axgr.cbar_axes):
-        cax.set_yticks(np.linspace(limits[0], limits[1], 5))
-        cax.set_yticklabels(np.linspace(limits[0], limits[1], 5), fontsize=8)
+        cax.set_yticks(np.linspace(np.round(limits[0]), np.round(limits[1]), 5))
+        cax.set_yticklabels(np.linspace(np.round(limits[0]), np.round(limits[1]), 5), fontsize=8)
 
-    # create an inset GeoAxes showing the location of the MODIS swath
-    geodetic = ccrs.Geodetic(globe=ccrs.Globe(datum='WGS84'))
-    sub_ax = fig.add_axes([0.65, 0.65, 0.2, 0.2], projection=projection)
-    sub_ax.set_extent([min_lon-2*dlatlon, max_lon+2*dlatlon, min_lat-2*dlatlon, max_lat+2*dlatlon], geodetic)
+    if inset == 1:
+        # create an inset GeoAxes showing the location of the MODIS swath
+        geodetic = ccrs.Geodetic(globe=ccrs.Globe(datum='WGS84'))
+        sub_ax = fig.add_axes([0.65, 0.65, 0.18, 0.18], projection=projection)
+        sub_ax.set_extent([min_lon-30, max_lon+30, min_lat-20, max_lat+20], geodetic)
 
-    # add land and extent box to inset
-    sub_ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='none'), zorder=0, facecolor='black')
-    extent = [min_lon, max_lon, min_lat, max_lat]
-    extent_box = sgeom.box(extent[0], extent[2], extent[1], extent[3])
-    sub_ax.add_geometries([extent_box], ccrs.PlateCarree(), facecolor='none', edgecolor='red', linewidth=1)
+        # add land and extent box to inset
+        sub_ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='none'), zorder=0, facecolor='black')
+        extent = [min_lon, max_lon, min_lat, max_lat]
+        extent_box = sgeom.box(extent[0], extent[2], extent[1], extent[3])
+        sub_ax.add_geometries([extent_box], ccrs.PlateCarree(), facecolor='none', edgecolor='blue', linewidth=1)
 
     print('\nPlotting map of the data...')
 
@@ -233,7 +239,7 @@ print_nc_file_info_groups(file_path)
 lat, lon = read_modis_geoloc(file_path)
 
 # read desired field and attributes
-data, name, units, valid_min, valid_max = read_modis_var(file_path, "Cloud_Top_Temperature")
+data, name, units, valid_min, valid_max = read_modis_var(file_path, "Cloud_Optical_Thickness")
 
 # set the colormap
 cmap = set_colormap(Balance_19, 0)
@@ -242,4 +248,4 @@ cmap = set_colormap(Balance_19, 0)
 modis_swath_map(nrows=1, ncols=1, field=data,
                 varname=name, varunits=units, cmap=cmap,
                 cmap_lims=(np.min(data), np.max(data)),
-                dlatlon=10, title=file)
+                dlatlon=2, title=file, inset=1)
