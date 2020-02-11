@@ -31,8 +31,8 @@ file_path = path + file
 
 def print_nc_file_info_groups(filepath):
     """
-    Function prints out information about variables
-    in the input netCDF file
+    This function prints out info about the variables
+    within the input netCDF file
     :param filepath: path to netcdf file
     :return: print to screen
     """
@@ -83,11 +83,6 @@ def read_modis_geoloc(filepath):
     lat = geolocation_group.variables['latitude'][:, :]
     lon = geolocation_group.variables['longitude'][:, :]
 
-    print('\nlat array shape...')
-    print(lat.shape, '\n')
-    print('lon array shape...')
-    print(lon.shape, '\n')
-
     return lat, lon
 
 
@@ -128,6 +123,7 @@ def read_modis_var(filepath, variable):
     var_fill = var._FillValue
     print("Fill value: ", var_fill)
 
+    # get the actual data and fill missing values
     var = var[:, :]
     var[var == var_fill] = np.nan
 
@@ -160,7 +156,7 @@ def set_colormap(cmap_name, argument):
 
 def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dlatlon, title):
 
-    print('Swath limits:')
+    print('\nPlot limits:')
     min_lon = np.min(lon)-dlatlon
     max_lon = np.max(lon)+dlatlon
     min_lat = np.min(lat)-dlatlon
@@ -192,9 +188,9 @@ def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dla
                 label_mode=1)
 
     for i, ax in enumerate(axgr):
-        ax.add_feature(cartopy.feature.GSHHSFeature('high',edgecolor='none'), zorder=0, facecolor='black')
+        ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='none'), zorder=0, facecolor='black')
         ax.gridlines(color='black', linestyle=':')
-        ax.set_title(title)
+        ax.set_title(title, fontsize=10)
         ax.set_extent([min_lon, max_lon, min_lat, max_lat], projection)
         ax.text(0.5, -0.1, varname + ' \n' + "Units: " + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
@@ -206,24 +202,24 @@ def modis_swath_map(nrows, ncols, field, varname, varunits, cmap, cmap_lims, dla
 
     # colorbar axis ticks and labels
     for i, cax in enumerate(axgr.cbar_axes):
-        cax.set_yticks((limits[0], limits[1]))
-        #cax.set_yticklabels(np.linspace(limits[0], limits[1], 5), fontsize=8)
+        cax.set_yticks(np.linspace(limits[0], limits[1], 5))
+        cax.set_yticklabels(np.linspace(limits[0], limits[1], 5), fontsize=8)
+
+    # create an inset GeoAxes showing the location of the MODIS swath
+    geodetic = ccrs.Geodetic(globe=ccrs.Globe(datum='WGS84'))
+    sub_ax = fig.add_axes([0.65, 0.65, 0.2, 0.2], projection=projection)
+    sub_ax.set_extent([min_lon-2*dlatlon, max_lon+2*dlatlon, min_lat-2*dlatlon, max_lat+2*dlatlon], geodetic)
+
+    # add land and extent box to inset
+    sub_ax.add_feature(cartopy.feature.GSHHSFeature('intermediate', edgecolor='none'), zorder=0, facecolor='black')
+    extent = [min_lon, max_lon, min_lat, max_lat]
+    extent_box = sgeom.box(extent[0], extent[2], extent[1], extent[3])
+    sub_ax.add_geometries([extent_box], ccrs.PlateCarree(), facecolor='none', edgecolor='red', linewidth=1)
 
     print('\nPlotting map of the data...')
 
-    geodetic = ccrs.Geodetic(globe=ccrs.Globe(datum='WGS84'))
-    # Create an inset GeoAxes showing the location of the Solomon Islands.
-    sub_ax = fig.add_axes([0.625, 0.625, 0.2, 0.2], projection=ccrs.PlateCarree())
-    sub_ax.set_extent([min_lon-30, max_lon+30, min_lat-20, max_lat+20], geodetic)
-
-    sub_ax.add_feature(cartopy.feature.LAND, facecolor='black')
-    sub_ax.coastlines()
-    extent = [min_lon, max_lon, min_lat, max_lat]
-    extent_box = sgeom.box(extent[0], extent[2], extent[1], extent[3])
-    sub_ax.add_geometries([extent_box], ccrs.PlateCarree(), facecolor='none',
-                          edgecolor='red', linewidth=2)
-
     plt.show()
+
     return
 
 
@@ -242,7 +238,7 @@ data, name, units, valid_min, valid_max = read_modis_var(file_path, "Cloud_Top_T
 # set the colormap
 cmap = set_colormap(Balance_19, 0)
 
-# plot global map
+# plot regional map with inset
 modis_swath_map(nrows=1, ncols=1, field=data,
                 varname=name, varunits=units, cmap=cmap,
                 cmap_lims=(np.min(data), np.max(data)),
