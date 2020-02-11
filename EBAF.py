@@ -51,7 +51,6 @@ def print_nc_file_info(filepath):
     for i in nc.variables:
         print(i, '-', nc.variables[i].units, '-', nc.variables[i].shape)
 
-    print('\n')
     return
 
 
@@ -106,7 +105,7 @@ def read_ebaf_var(filepath, variable):
     var_units = var.units
     var_name = var.standard_name
 
-    print('field shape...')
+    print('variable shape...')
     print(var.shape, '\n')
 
     return var, var_name, var_units
@@ -150,7 +149,7 @@ def compute_monthly_anomalies(field):
     while i < record_len:
         i += 12
         num_yr += 1
-        print(i, num_yr)
+        # print(i, num_yr)
 
     # repeat 20 times
     seasonal_cycle = np.tile(monthly_climatology, (num_yr, 1, 1))
@@ -179,26 +178,26 @@ def compute_monthly_anomalies(field):
 # ========================================================================
 
 
-# def get_date(file):
-#     """
-#     Get date/time info from input data file for
-#     Nightshade and displaying it on plots
-#     :param file: input file
-#     :return: date object and time string
-#     """
-#
-#     time_str = file[-10:]
-#     print(time_str)
-#     yyyy = time_str[0:4]
-#     mm = time_str[4:6]
-#     dd = time_str[6:8]
-#     hr = time_str[8:10]
-#
-#     date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
-#
-#     date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
-#
-#     return date, date_str
+def get_date(file):
+    """
+    Get date/time info from input data file for
+    Nightshade and displaying it on plots
+    :param file: input file
+    :return: date object and time string
+    """
+
+    time_str = file[-10:]
+    print(time_str)
+    yyyy = time_str[0:4]
+    mm = time_str[4:6]
+    dd = time_str[6:8]
+    hr = time_str[8:10]
+
+    date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
+
+    date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
+
+    return date, date_str
 
 
 # ========================================================================
@@ -405,10 +404,13 @@ w = cos_lat_weight(latitude)
 field, name, units = read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
 
 # compute the long-term mean and standard deviation
-mean_field, stdv_field = compute_climatology(field)
+# mean_field, stdv_field = compute_climatology(field)
 
-# compute area weighted averages of the long-term mean
-compute_regional_averages(mean_field)
+# compute area-weighted averages of the long-term mean
+# compute_regional_averages(mean_field)
+
+# compute composite difference
+#
 
 # compute anomalies by removing long-term monthly means
 monthly_anomalies, seasonal_cycle = compute_monthly_anomalies(field)
@@ -417,7 +419,7 @@ monthly_anomalies, seasonal_cycle = compute_monthly_anomalies(field)
 cmap = set_colormap(Balance_19, 0)
 
 # plot global map
-global_map(nrows=1, ncols=1, cen_lon=180, field=monthly_anomalies[100, :, :],
+global_map(nrows=1, ncols=1, cen_lon=180, field=monthly_anomalies[0, :, :],
            varname=name, varunits=units, cmap=cmap,
            cmap_lims=(-30, 30), ti_str='CERES-EBAF Ed4.1')
 
