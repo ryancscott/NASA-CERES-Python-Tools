@@ -36,9 +36,7 @@ file_path2 = path2 + file2
 print(file_path2)
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
 def read_crs_geolocation(file_path):
@@ -69,12 +67,10 @@ def read_crs_geolocation(file_path):
     return fov_lat, fov_lon, pres_lev, time_obs
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
-def select_crs_var(file_path, vararg, levarg, fill):
+def read_crs_var(file_path, vararg, levarg, fill):
     """Select field at appropriate vertical level
     from the official CERES CRS HDF file.
 
@@ -82,7 +78,9 @@ def select_crs_var(file_path, vararg, levarg, fill):
 
     (1) file_path = path to file
     (2) vararg = variable argument and
-    (3) levarg = level argument"""
+    (3) levarg = level argument
+    (4) fill = option to fill missing values
+    """
 
     from pyhdf import SD
     hdf = SD.SD(file_path)
@@ -123,9 +121,7 @@ def select_crs_var(file_path, vararg, levarg, fill):
     return var_field, var_name, var_units, lev_name
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
 def get_date(file):
@@ -144,12 +140,10 @@ def get_date(file):
     return date, date_str
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
-def select_crs_var2(file_path, vararg, levarg, fill):
+def read_crs_var2(file_path, vararg, levarg, fill):
     """
     Select field at desired vertical level from
     my run of the CERES CRS4 code.
@@ -198,9 +192,7 @@ def select_crs_var2(file_path, vararg, levarg, fill):
     return var_field, var_name, var_units, lev_name
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
 def compute_diff(field2, field1):
@@ -210,12 +202,13 @@ def compute_diff(field2, field1):
     diff[diff == max(diff)] = np.nan
     diff[diff == min(diff)] = np.nan
 
+    # num_good = np.sum(np.isnan(diff))
+    # print(num_good)
+
     return diff
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
 def set_colormap(cmap_name, typarg):
@@ -245,15 +238,13 @@ def set_colormap(cmap_name, typarg):
     return c_map
 
 
-print('============================================')
-print('\t\t\tDefining function...\t\t\t')
-print('============================================')
+# =======================================================
 
 
-def plot_ssf_swath(nrows, ncols, cen_lon,
-                   field, varname, levname, varunits,
-                   cmap, cmap_lims,
-                   date, nightshade, title_str):
+def plot_swath(nrows, ncols, cen_lon,
+                field, varname, levname, varunits,
+                cmap, cmap_lims,
+                date, nightshade, title_str):
     """
     Plots map of CERES footprint swath data.
 
@@ -321,6 +312,63 @@ def plot_ssf_swath(nrows, ncols, cen_lon,
 # ========================================================================
 
 
+def histogram_scatterplot(difference, varname, levname, time_info):
+
+    # Ed 2G
+    field1, var1, units1, lev1 = read_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
+    # Ed 4
+    field2, var2, units2, lev2 = read_crs_var2(file_path=file_path2, vararg=0, levarg=1, fill=1)
+
+    difference = compute_diff(field2=field2, field1=field1)
+
+    print(np.nanmean(difference))
+
+    # number of FOVs compared
+    print("Total number of FOVs in swath: ", len(difference))
+    print("Total number of FOVs where at least one is NaN: ", np.sum(np.isnan(difference)))
+    N = len(difference) - np.sum(np.isnan(difference))
+    print("Total number of FOVs compared: ", N)
+
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    fig.suptitle('CERES Terra Cloud Radiative Swath' + ' - ' + time_info, fontsize=11)
+
+    # histogram of difference
+    axs[0].hist(difference, bins=200, align='mid', rwidth=1)
+    axs[0].grid()
+    axs[0].set_axisbelow("True")
+    axs[0].set_title("CRS Ed4 minus CRS Ed2G", fontsize=11)
+    axs[0].set_xlabel(varname + ' - ' + levname + "\n" + r"Flux difference ($\Delta$LW)")
+    axs[0].set_xlim([-125, 125])
+    axs[0].set_ylabel("Number of CERES FOVs, Total: " + str(N))
+
+    # scatter plot
+    axs[1].plot(range(500), range(500), color='black', zorder=0)
+    axs[1].scatter(field1, field2, s=0.5)
+    axs[1].set(xlim=(0, 500), ylim=(0, 500))
+    axs[1].grid()
+    axs[1].set_axisbelow("True")
+    axs[1].set_title(varname + ' - ' + levname, fontsize=11)
+    axs[1].set_xlabel("CRS Edition 2G")
+    axs[1].set_ylabel("CRS Edition 4")
+
+    plt.show()
+    return
+
+
+# =========================================================================
+
+
+# def scatterplot(field1, field2):
+#     plt.scatter(field1, field2)
+#     plt.
+#     plt.grid(b=1, zorder=0)
+#     plt.title("LW Flux", fontsize=11)
+#     plt.xlabel("CRS Ed2G")
+#     plt.xlim([0, 500])
+#     plt.ylabel("CRS Ed4")
+#     plt.show()
+
+
 print('============================================')
 print('\t\t\tReading geolocation...\t\t\t')
 print('============================================')
@@ -331,8 +379,8 @@ print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1, lev1 = select_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
-field2, var2, units2, lev2 = select_crs_var2(file_path=file_path2, vararg=0, levarg=1, fill=0)
+field1, var1, units1, lev1 = read_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
+field2, var2, units2, lev2 = read_crs_var2(file_path=file_path2, vararg=0, levarg=1, fill=1)
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
@@ -356,16 +404,17 @@ print('============================================')
 print('\t\t\tPlotting data...\t\t\t')
 print('============================================')
 
+print("Plotting: ", field1)
 a, b = input("Enter colormap limits: ").split(',')
 print("Specified colormap range [{}, {}]".format(a, b))
 cmap_lim = (float(a), float(b))
 
-title_str = 'CERES Terra CRS Ed4'
+#title_str = 'CERES Terra CRS Ed4'
+title_str = r'CERES Terra CRS Ed4 - Ed2G difference ($\Delta$)'
 
-#title_str = r'Difference ($\Delta$) between CERES Terra CRS Ed4 - Ed2G' + ' for ' + date_str
+plot_swath(nrows=1, ncols=1, cen_lon=0, field=difference,
+           varname=var1, levname=lev1, varunits=units1,
+           cmap=colormap, cmap_lims=(-50,50), date=date,
+           nightshade=1, title_str=title_str)
 
-plot_ssf_swath(nrows=1, ncols=1, cen_lon=0, field=field1,
-               varname=var1, levname=lev1, varunits=units1,
-               cmap=colormap, cmap_lims=cmap_lim, date=date,
-               nightshade=1, title_str=title_str)
-
+histogram_scatterplot(difference, var1, lev1, date_str)
