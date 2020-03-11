@@ -1,21 +1,102 @@
-# =====================================================================
-#                           CERES PYTHON TOOLS
-# =====================================================================
+# ========================================================================
+#                         PYTHON NASA CERES TOOLS
+# ========================================================================
 #
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Purpose: This library contains functions to process and manipulate
-#          satellite data from the NASA Clouds and the Earth's Radiant
-#          Energy System (CERES) satellite mission, including
-#          footprint-level and gridded fields.
+# Purpose: This library contains Python functions to manipulate & analyze
+#          data from NASA's Clouds and the Earth's Radiant Energy System
+#          (CERES) satellite mission, including footprint-level and time-
+#          interpolated & spatially-averaged (TISA) gridded fields. It is
+#          used for data development and analysis of officially released
+#          data products.
 #
+# Date: March 11, 2020
+#
+# ========================================================================
+
+
+def get_date(file):
+    """
+    Function returns the
+    :param file:
+    :return:
+    """
+
+    import datetime
+
+    time_str = file[-10:]
+    print(time_str)
+    yyyy = time_str[0:4]
+    mm = time_str[4:6]
+    dd = time_str[6:8]
+    hr = time_str[8:10]
+
+    date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
+
+    date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
+
+    return date, date_str
+
+
+# ========================================================================
+
+
+def get_platform(filename):
+    """
+
+    :param filename:
+    :return:
+    """
+    terra_aqua = filename[8]
+
+    if terra_aqua == "T":
+        satellite = "Terra"
+    elif terra_aqua == "A":
+        satellite = "Aqua"
+
+    # get flight model (FM) info
+    if satellite == "Terra":
+        flight_model = filename[14:17]
+    elif satellite == "Aqua":
+        flight_model = filename[13:16]
+
+    platform = satellite + '-' + flight_model
+
+    # print("CERES Instrument:", platform)
+    return platform
+
+
+# =====================================================================
+
+
+def read_ssf_geolocation(file_path):
+    """Reads geolocation info from file"""
+
+    from pyhdf import SD
+    hdf = SD.SD(file_path)
+    # print(hdf.datasets())
+
+    colatitude = hdf.select('Colatitude of CERES FOV at surface')
+    colat = colatitude.get()
+    fov_lat = 90 - colat
+
+    longitude = hdf.select('Longitude of CERES FOV at surface')
+    fov_lon = longitude.get()
+
+    time_of_obs = hdf.select("Time of observation")
+    time_obs = time_of_obs.get()
+
+    return fov_lat, fov_lon, time_obs
+
+
 # =====================================================================
 
 
 def read_crs_geolocation(file_path):
     """
     Reads geolocation information from file and converts
-    colatitude to latitude for each CERES footprint/FOV
+    co-latitude to latitude for each CERES footprint/FOV
     :param file_path: path to input file
     :return: lat/lon of each FOV, pressure levels, and
     the time of each observation
@@ -44,6 +125,49 @@ def read_crs_geolocation(file_path):
 # ==============================================================================
 
 
+def read_ssf_var(file_path, vararg, fill):
+    """
+    Read CERES SSF footprint variable
+
+    :param file_path: path to file
+    :param vararg: variable argument
+    :param fill: fill option
+    :return: field, name, units
+    """
+
+    import numpy as np
+    from pyhdf import SD
+    hdf = SD.SD(file_path)
+
+    # select variable
+    switch = {
+        0: 'CERES downward SW surface flux - Model A',
+        1: 'CERES downward LW surface flux - Model A',
+        2: 'CERES downward SW surface flux - Model B',
+        3: 'CERES downward LW surface flux - Model B'
+    }
+    var_name = switch.get(vararg)
+
+    print("Getting", switch.get(vararg, "N/A"))
+
+    # select and get the variable
+    data = hdf.select(var_name)
+    variable = data.get()
+    var_units = data.units
+    var_fill = data._FillValue
+
+    if fill == 1:
+        variable[variable == var_fill] = np.nan
+
+    # get field at appropriate vertical level
+    var_field = variable
+
+    return var_field, var_name, var_units
+
+
+# ==============================================================================
+
+
 def read_crs_var(file_path, vararg, levarg, fill):
     """Select field at appropriate vertical level
     from the official CERES CRS HDF file.
@@ -56,6 +180,7 @@ def read_crs_var(file_path, vararg, levarg, fill):
     (4) fill = option to fill missing values
     """
 
+    import numpy as np
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
@@ -99,29 +224,10 @@ def read_crs_var(file_path, vararg, levarg, fill):
 # ==============================================================================
 
 
-def get_date(file):
-
-    time_str = file[-10:]
-    print(time_str)
-    yyyy = time_str[0:4]
-    mm = time_str[4:6]
-    dd = time_str[6:8]
-    hr = time_str[8:10]
-
-    date = datetime.datetime(int(yyyy), int(mm), int(dd), int(hr))
-
-    date_str = mm + '/' + dd + '/' + yyyy + ':' + hr + 'h'
-
-    return date, date_str
-
-
-# ==============================================================================
-
-
-def read_crs_var2(file_path, vararg, levarg, fill):
+def read_crs_dev_var(file_path, vararg, levarg, fill):
     """
     Select field at desired vertical level from
-    my run of the CERES CRS4 code.
+    CERES CRS4 ***DEVELOPMENT*** code
 
     Function arguments:
 
@@ -131,6 +237,7 @@ def read_crs_var2(file_path, vararg, levarg, fill):
     (4) fill = fillvalues -> NaN   [logical]
     """
 
+    import numpy as np
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
@@ -150,7 +257,7 @@ def read_crs_var2(file_path, vararg, levarg, fill):
     }
     lev_name = switch.get(levarg)
 
-    print("Reading", switch.get(vararg, "N/A"), "at:",
+    print("Getting", switch.get(vararg, "N/A"), "at:",
           switch2.get(levarg, "N/A"))
 
     # select the variable and get the data
@@ -187,7 +294,7 @@ def compute_diff(field2, field1):
 
 def set_colormap(cmap_name, typarg):
     """
-    Selects colormap for plotting using palettable library
+    Selects colormap from palettable library
 
     Function arguments:
 
@@ -202,23 +309,24 @@ def set_colormap(cmap_name, typarg):
     print("\nUsing", switch.get(typarg, "N/A"), "colormap")
 
     if typarg == 0:
-        c_map = cmap_name.mpl_colormap
+        color_map = cmap_name.mpl_colormap
     elif typarg == 1:
         from matplotlib.colors import ListedColormap
-        c_map = ListedColormap(cmap_name.mpl_colors)
+        color_map = ListedColormap(cmap_name.mpl_colors)
     elif typarg != 1 or typarg != 0:
         print('Please select 0 or 1')
 
-    return c_map
+    return color_map
 
 
 # ==============================================================================
 
 
-def plot_swath(nrows, ncols, cen_lon,
-                field, varname, levname, varunits,
-                cmap, cmap_lims,
-                date, nightshade, title_str):
+def plot_swath(lon, lat, field,
+               varname, levname, varunits,
+               nrows, ncols, cen_lon,
+               cmap, cmap_lims, date, nightshade,
+               date_str, title_str):
     """
     Plots map of CERES footprint swath data.
 
@@ -237,6 +345,13 @@ def plot_swath(nrows, ncols, cen_lon,
     (11) nightshade option [object]
     (12) title string      [string]
     """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy.feature
+    from mpl_toolkits.axes_grid1 import AxesGrid
+    from cartopy.mpl.geoaxes import GeoAxes
+    from cartopy.feature.nightshade import Nightshade
 
     # Map projection
     projection = ccrs.PlateCarree(central_longitude=cen_lon)
@@ -291,7 +406,7 @@ def plot_swath(nrows, ncols, cen_lon,
 # ==============================================================================
 
 
-def histogram_scatterplot(field1, field2, varname, levname, time_info):
+def histogram_scatterplot(field1, field2, varname, levname, time_info, platform):
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -299,7 +414,7 @@ def histogram_scatterplot(field1, field2, varname, levname, time_info):
     swath_diff = compute_diff(field2=field2, field1=field1)
 
     mean_diff = np.nanmean(swath_diff)
-    stdv_diff = np.nanstd(swath_diff)
+    sigma_diff = np.nanstd(swath_diff)
 
     # number of FOVs compared
     print("Total number of FOVs in swath: ", len(swath_diff))
@@ -321,7 +436,7 @@ def histogram_scatterplot(field1, field2, varname, levname, time_info):
 
     # show descriptive statistics
     textstr = "N = " + str(N) + "\n" + r"Mean: $\bar{\Delta}$ = " + str(np.around(mean_diff, 2)) + "\n" + \
-              r"Stdv: $\sigma_{\Delta}$ = " + str(np.around(stdv_diff, 2))
+              r"Stdv: $\sigma_{\Delta}$ = " + str(np.around(sigma_diff, 2))
     props = dict(facecolor='white', alpha=0.85)
     axs[0].text(0.05, 0.95, textstr, transform=axs[0].transAxes, fontsize=8,
                 verticalalignment='top', bbox=props)

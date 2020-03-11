@@ -13,6 +13,7 @@ from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from palettable.cmocean.sequential import Thermal_20
 from palettable.cubehelix import cubehelix2_16
 from palettable.cmocean.diverging import Balance_19
+from palettable.colorbrewer.sequential import Greys_8
 from palettable.mycarta import Cube1_20
 
 
@@ -83,6 +84,8 @@ def read_modis_geoloc(filepath):
 
     lat = geolocation_group.variables['latitude'][:, :]
     lon = geolocation_group.variables['longitude'][:, :]
+
+    #lon[lon<0] = lon[lon<0]+360
 
     return lat, lon
 
@@ -248,4 +251,4 @@ cmap = set_colormap(Balance_19, 0)
 modis_swath_map(nrows=1, ncols=1, field=data,
                 varname=name, varunits=units, cmap=cmap,
                 cmap_lims=(np.min(data), np.max(data)),
-                dlatlon=2, title=file, inset=1)
+                dlatlon=5, title=file, inset=1)
