@@ -87,7 +87,10 @@ def read_ssf_geolocation(file_path):
     time_of_obs = hdf.select("Time of observation")
     time_obs = time_of_obs.get()
 
-    return fov_lat, fov_lon, time_obs
+    solar_zenith = hdf.select("CERES solar zenith at surface")
+    sza = solar_zenith.get()
+
+    return fov_lat, fov_lon, time_obs, sza
 
 
 # =====================================================================
@@ -119,7 +122,10 @@ def read_crs_geolocation(file_path):
     time_of_obs = hdf.select("Time of observation")
     time_obs = time_of_obs.get()
 
-    return fov_lat, fov_lon, pres_lev, time_obs
+    solar_zenith = hdf.select("CERES solar zenith at surface")
+    sza = solar_zenith.get()
+
+    return fov_lat, fov_lon, pres_lev, time_obs, sza
 
 
 # ==============================================================================
@@ -278,13 +284,19 @@ def read_crs_dev_var(file_path, vararg, levarg, fill):
 # ==============================================================================
 
 
-def compute_diff(field2, field1):
+def compute_swath_diff(field2, field1, day_only, sza):
 
     import numpy as np
+
     diff = field2 - field1
 
     diff[diff == max(diff)] = np.nan
     diff[diff == min(diff)] = np.nan
+
+    if day_only == 1:
+        for i in range(99347):
+            if sza[i] > 90:
+                diff[i] = np.nan
 
     return diff
 
@@ -332,18 +344,21 @@ def plot_swath(lon, lat, field,
 
     Function arguments:
 
-    (1) number of rows     [int]
-    (2) number of columns  [int]
-    (3) central longitude  [float]
-    (4) field to plot      [string]
-    (5) variable name      [string]
-    (6) level name         [string]
-    (7) variable units     [string]
-    (8) colormap           [object]
-    (9) colormap limits    [tuple]
-    (10) date info         [object]
-    (11) nightshade option [object]
-    (12) title string      [string]
+    (1) longitude array    [float]
+    (2) latitude array     [float]
+    (3) field to plot      [string]
+    (4) variable name      [string]
+    (5) level name         [string]
+    (6) variable units     [string]
+    (7) number of rows     [int]
+    (8) number of columns  [int]
+    (9) central longitude  [float]
+    (10) colormap          [object]
+    (11) colormap limits   [tuple]
+    (12) date info         [object]
+    (13) nightshade option [object]
+    (14) date string       [string]
+    (15) title string      [string]
     """
     import numpy as np
     import matplotlib.pyplot as plt
@@ -386,7 +401,7 @@ def plot_swath(lon, lat, field,
         if nightshade == 1:
             ax.add_feature(Nightshade(date, alpha=0.15))
 
-    # To use a different colorbar range every time, use a tuple of tuples
+    # To use a different colorbar range every time, can use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
         im = axgr[i].scatter(lon, lat, c=field, s=1,
@@ -406,12 +421,12 @@ def plot_swath(lon, lat, field,
 # ==============================================================================
 
 
-def histogram_scatterplot(field1, field2, varname, levname, time_info, platform):
+def swath_histogram_scatterplot(field1, field2, varname, levname, time_info, platform, day_only, sza):
 
     import numpy as np
     import matplotlib.pyplot as plt
 
-    swath_diff = compute_diff(field2=field2, field1=field1)
+    swath_diff = compute_swath_diff(field2=field2, field1=field1, day_only=day_only, sza=sza)
 
     mean_diff = np.nanmean(swath_diff)
     sigma_diff = np.nanstd(swath_diff)
@@ -549,12 +564,12 @@ def read_ebaf_var(filepath, variable):
 
 def compute_monthly_anomalies(field):
     """
-    Compute long-term average for each calendar month, i.e., the monthly seasonal cycle,
-    and then subtract the long-term means from the raw fields to get monthly anomalies
+    (1) Compute long-term average for each calendar month, i.e., the monthly mean seasonal cycle
+    (2) Subtract the appropriate long-term means from the corresponding monthly fields to get monthly anomalies
     :param field: variable for which to compute the climatology/anomaly [lat,lon,time]
     :return:
-    (1) time series of monthly anomalies
-    (2) monthly mean seasonal cycle
+    (1) time series of monthly anomalies at each grid box
+    (2) monthly mean seasonal cycle at each grid box
     """
     import numpy as np
     import matplotlib.pyplot as plt

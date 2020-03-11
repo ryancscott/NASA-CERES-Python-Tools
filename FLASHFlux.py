@@ -22,7 +22,7 @@ print('============================================')
 print('\t\t\tReading geolocation...\t\t\t')
 print('============================================')
 
-lat, lon, time_obs = ceres.read_ssf_geolocation(file_path=file_path1)
+lat, lon, time_obs, sza = ceres.read_ssf_geolocation(file_path=file_path1)
 
 print('============================================')
 print('\t\t\tReading data...\t\t\t')
