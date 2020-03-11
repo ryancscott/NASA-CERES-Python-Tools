@@ -562,7 +562,7 @@ def read_ebaf_var(filepath, variable):
 # ========================================================================
 
 
-def compute_monthly_anomalies(field):
+def compute_monthly_anomalies(field, fieldname):
     """
     (1) Compute long-term average for each calendar month, i.e., the monthly mean seasonal cycle
     (2) Subtract the appropriate long-term means from the corresponding monthly fields to get monthly anomalies
@@ -617,6 +617,7 @@ def compute_monthly_anomalies(field):
     ax1.plot(np.linspace(0, 0, record_len))
     ax1.plot(monthly_anomalies[:, r, p], label='Anomalies')
     ax1.legend(fontsize=10)
+    #ax1.title(str(fieldname))
     # second set of axes
     ax2.plot(seasonal_cycle[:, r, p], label='Seasonal Cycle')
     ax2.plot(field[:, r, p], label='Raw Field')
@@ -751,6 +752,25 @@ def composite_diff(field, ind1, ind2):
 
     return composite_diff
 
+
+# ========================================================================
+
+
+def regress_fields(x_anomalies, y_anomalies):
+
+    import numpy as np
+
+    coefficients = np.empty([np.shape(x_anomalies)[1], np.shape(x_anomalies)[2]])
+    intercept = np.zeros([np.shape(x_anomalies)[1], np.shape(x_anomalies)[2]])
+
+    for i in range(coefficients.shape[0]):
+        for j in range(coefficients.shape[1]):
+            x = x_anomalies[:, i, j]
+            y = y_anomalies[:, i, j]
+            a = np.vstack([x, np.ones(len(x))]).T
+            coefficients[i, j], intercept[i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
+
+    return coefficients
 
 # ========================================================================
 
