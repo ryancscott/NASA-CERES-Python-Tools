@@ -52,7 +52,7 @@ print('============================================')
 print('\t\t\tComputing difference...\t\t\t')
 print('============================================')
 
-difference = ceres.compute_swath_diff(field2=field2, field1=field1, day_only=0, sza=sza)
+difference = ceres.swath_difference(field2=field2, field1=field1, day_only=0, sza=sza)
 
 print('============================================')
 print('\t\t\tSetting colormap...\t\t\t')

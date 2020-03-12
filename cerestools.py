@@ -1,19 +1,54 @@
-# ========================================================================
-#                         PYTHON NASA CERES TOOLS
-# ========================================================================
+# ==============================================================================
+#
+#                        *** NASA CERES PYTHON TOOLS ***
+#
+# ==============================================================================
+#
+# Module: cerestools.py
 #
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Purpose: This library contains Python functions to manipulate & analyze
-#          data from NASA's Clouds and the Earth's Radiant Energy System
-#          (CERES) satellite mission, including footprint-level and time-
-#          interpolated & spatially-averaged (TISA) gridded fields. It is
-#          used for data development and analysis of officially released
-#          data products.
+# Purpose: This library contains Python functions to manipulate & analyze data
+#          from the NASA Clouds and the Earth's Radiant Energy System (CERES)
+#          satellite mission, including footprint-level and gridded fields. It
+#          includes functions that can be used for data development purposes as
+#          well as analysis of officially released data products.
+#
+# Usage: import cerestools as ceres
+#
+# Required: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime
 #
 # Date: March 11, 2020
 #
-# ========================================================================
+# ==============================================================================
+# FOOTPRINT-LEVEL
+# ----------------
+# get date                    <- get the year, month, day, hour from input file
+# get platform                <- get the satellite and instrument name
+# read_ssf_geolocation        <- get footprint lat, lon, etc. from SSF file
+# read_crs_geolocation        <- get footprint lat, lon, etc. from CRS file
+# read_ssf_var                <- get variable from SSF file
+# read_crs_var                <- get variable from CRS file
+# read_crs_dev_var            <- get variable from CRS development file
+# swath_difference            <- compute difference between swaths
+# set_colormap                <- set colormap from palettable library
+# plot_swath                  <- plot SSF, CRS swath
+# swath_histogram_scatterplot <- produce histogram & scatter plot of swath diff
+# ----------------
+# GRIDDED FIELDS
+# ----------------
+# print_nc_file_info          <- print info about variables in netCDF file
+# read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
+# read_ebaf_var               <- read field variable from EBAF file
+# compute_monthly_anomalies   <- compute interannual monthly anomalies
+# cos_lat_weight              <- compute matrix of cos(lat) weights
+# compute_annual_climatology  <- compute long-term mean and sigma
+# compute_regional_averages   <- compute area-weighted mean for various regions
+# composite_difference        <- compute composite mean difference
+# simple_regression           <- regress field on another field
+# multiple_regression         <- regress field on multiple other fields
+# global_map                  <- plot map of gridded field
+# ==============================================================================
 
 
 def get_date(file):
@@ -284,26 +319,6 @@ def read_crs_dev_var(file_path, vararg, levarg, fill):
 # ==============================================================================
 
 
-def compute_swath_diff(field2, field1, day_only, sza):
-
-    import numpy as np
-
-    diff = field2 - field1
-
-    diff[diff == max(diff)] = np.nan
-    diff[diff == min(diff)] = np.nan
-
-    if day_only == 1:
-        for i in range(99347):
-            if sza[i] > 90:
-                diff[i] = np.nan
-
-    return diff
-
-
-# ==============================================================================
-
-
 def set_colormap(cmap_name, typarg):
     """
     Selects colormap from palettable library
@@ -416,6 +431,35 @@ def plot_swath(lon, lat, field,
 
     plt.show()
     return
+
+
+# ==============================================================================
+
+
+def swath_difference(field2, field1, day_only, sza):
+    """
+
+    :param field2:
+    :param field1:
+    :param day_only:
+    :param sza:
+    :return:
+    """
+
+    import numpy as np
+
+    diff = field2 - field1
+
+    diff[diff == max(diff)] = np.nan
+    diff[diff == min(diff)] = np.nan
+
+    # need to num FOVs from file...
+    if day_only == 1:
+        for i in range(99347):
+            if sza[i] > 90:
+                diff[i] = np.nan
+
+    return diff
 
 
 # ==============================================================================
@@ -732,7 +776,7 @@ def compute_regional_averages(field, latitude, w):
 # ========================================================================
 
 
-def composite_diff(field, ind1, ind2):
+def composite_difference(field, ind1, ind2):
     """
     Calculates composite means and then takes
     their difference to illustrate change between
