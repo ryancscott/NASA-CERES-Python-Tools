@@ -617,11 +617,12 @@ def compute_monthly_anomalies(field, fieldname):
     ax1.plot(np.linspace(0, 0, record_len))
     ax1.plot(monthly_anomalies[:, r, p], label='Anomalies')
     ax1.legend(fontsize=10)
-    #ax1.title(str(fieldname))
+    ax1.set_title(fieldname)
     # second set of axes
     ax2.plot(seasonal_cycle[:, r, p], label='Seasonal Cycle')
     ax2.plot(field[:, r, p], label='Raw Field')
     ax2.legend(fontsize=10)
+    plt.show()
 
     return monthly_anomalies, seasonal_cycle
 
@@ -662,11 +663,11 @@ def cos_lat_weight(lat_vector):
 # ========================================================================
 
 
-def compute_climatology(field):
+def compute_annual_climatology(field):
     """
-    Compute mean and standard deviation of field
-    :param field: field under consideration
-    :return: the mean and standard deviation
+    Compute annual mean and standard deviation of field
+    :param field: variable under consideration
+    :return: long-term mean and standard deviation
     """
 
     import numpy as np
@@ -675,9 +676,9 @@ def compute_climatology(field):
     mean_field = np.nanmean(field, axis=0)
 
     # standard deviation over entire time series
-    stdv_field = np.nanstd(field, axis=0)
+    standard_deviation_field = np.nanstd(field, axis=0)
 
-    return mean_field, stdv_field
+    return mean_field, standard_deviation_field
 
 
 # ========================================================================
@@ -756,11 +757,11 @@ def composite_diff(field, ind1, ind2):
 # ========================================================================
 
 
-def regress_fields(x_anomalies, y_anomalies):
+def simple_regression(x_anomalies, y_anomalies):
 
     import numpy as np
 
-    coefficients = np.empty([np.shape(x_anomalies)[1], np.shape(x_anomalies)[2]])
+    coefficients = np.zeros([np.shape(x_anomalies)[1], np.shape(x_anomalies)[2]])
     intercept = np.zeros([np.shape(x_anomalies)[1], np.shape(x_anomalies)[2]])
 
     for i in range(coefficients.shape[0]):
@@ -769,6 +770,60 @@ def regress_fields(x_anomalies, y_anomalies):
             y = y_anomalies[:, i, j]
             a = np.vstack([x, np.ones(len(x))]).T
             coefficients[i, j], intercept[i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
+
+    return coefficients
+
+
+# ========================================================================
+
+
+def multiple_regression_old(x1_anomalies, x2_anomalies, y_anomalies):
+
+    import numpy as np
+
+    coefficients = np.zeros([3, np.shape(x1_anomalies)[1], np.shape(x1_anomalies)[2]])
+
+    for i in range(coefficients.shape[1]):
+        for j in range(coefficients.shape[2]):
+            x1 = x1_anomalies[:, i, j]
+            x2 = x2_anomalies[:, i, j]
+            y = y_anomalies[:, i, j]
+            a = np.vstack([x1, x2, np.ones(len(x1))]).T
+            coefficients[:, i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
+
+    return coefficients
+
+# ========================================================================
+
+
+def multiple_regression(y_anomalies, *x_anomalies):
+    """
+
+    :param y_anomalies:
+    :param x_anomalies:
+    :return:
+    """
+
+    import numpy as np
+
+    c = len(x_anomalies) + 1
+    coefficients = np.zeros([c, np.shape(x_anomalies[1])[1], np.shape(x_anomalies[1])[2]])
+
+    for i in range(coefficients.shape[1]):
+        for j in range(coefficients.shape[2]):
+
+            # empty array for predictor variable time series
+            x = np.empty([len(x_anomalies), len(x_anomalies[1])])
+
+            # add row for each predictor variable
+            for k, x_anoms in enumerate(x_anomalies):
+                x[k, :] = x_anoms[:, i, j]
+
+            y = y_anomalies[:, i, j]
+            a = np.vstack([x, np.ones(len(x[0, :]))]).T
+
+            # compute coefficients
+            coefficients[:, i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
 
     return coefficients
 
@@ -786,6 +841,8 @@ def global_map(lon, lat, field,
     from mpl_toolkits.axes_grid1 import AxesGrid
     from cartopy.mpl.geoaxes import GeoAxes
 
+    fig = plt.figure(figsize=(8, 6.5))
+
     # Map projection
     projection = ccrs.PlateCarree(central_longitude=cen_lon)
 
@@ -793,7 +850,6 @@ def global_map(lon, lat, field,
     axes_class = (GeoAxes, dict(map_projection=projection))
 
     # Plot figure
-    fig = plt.figure(figsize=(8, 6.5))
     axgr = AxesGrid(fig, 111, axes_class=axes_class,
                 nrows_ncols=(nrows, ncols),
                 axes_pad=(0.4,0.4),
