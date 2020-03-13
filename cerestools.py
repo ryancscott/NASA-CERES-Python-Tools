@@ -1,6 +1,6 @@
 # ==============================================================================
 #
-#                        *** NASA CERES PYTHON TOOLS ***
+#                        *****-NASA CERES PYTHON TOOLS-*****
 #
 # ==============================================================================
 #
@@ -8,15 +8,15 @@
 #
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Purpose: This library contains Python functions to manipulate & analyze data
+# Purpose: This library contains Python functions to manipulate and analyze data
 #          from the NASA Clouds and the Earth's Radiant Energy System (CERES)
-#          satellite mission, including footprint-level and gridded fields. It
-#          includes functions that can be used for data development purposes as
-#          well as analysis of officially released data products.
+#          satellite mission, including both footprint-level swath and gridded
+#          fields. Included are various functions that can be used for data
+#          development purposes and analysis of officially released products.
 #
 # Usage: import cerestools as ceres
 #
-# Required: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime
+# Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime
 #
 # Date: March 11, 2020
 #
@@ -42,7 +42,7 @@
 # read_ebaf_var               <- read field variable from EBAF file
 # compute_monthly_anomalies   <- compute interannual monthly anomalies
 # cos_lat_weight              <- compute matrix of cos(lat) weights
-# compute_annual_climatology  <- compute long-term mean and sigma
+# compute_annual_climatology  <- compute long-term mean and std dev (sigma)
 # compute_regional_averages   <- compute area-weighted mean for various regions
 # composite_difference        <- compute composite mean difference
 # simple_regression           <- regress field on another field
@@ -53,9 +53,15 @@
 
 def get_date(file):
     """
-    Function returns the
-    :param file:
-    :return:
+    ----------------------------------------------------------------------------
+    This function reads input file yyyymmddhh information and transforms
+    the date string into a readable form for plotting. It also outputs the date
+    for ingestion by the cartopy NightShade function
+    ----------------------------------------------------------------------------
+    :param file: input file
+    ----------------------------------------------------------------------------
+    :return: (1) date for Nightshade
+             (2) date_str for plotting [string]
     """
 
     import datetime
@@ -77,13 +83,17 @@ def get_date(file):
 # ========================================================================
 
 
-def get_platform(filename):
+def get_platform(file):
     """
-
-    :param filename:
-    :return:
+    ----------------------------------------------------------------------------
+    This function retrieves the satellite and flight model info from the
+    input file
+    ----------------------------------------------------------------------------
+    :param file: input file name
+    ----------------------------------------------------------------------------
+    :return: (1) platform = satellite and flight model [string]
     """
-    terra_aqua = filename[8]
+    terra_aqua = file[8]
 
     if terra_aqua == "T":
         satellite = "Terra"
@@ -92,13 +102,13 @@ def get_platform(filename):
 
     # get flight model (FM) info
     if satellite == "Terra":
-        flight_model = filename[14:17]
+        flight_model = file[14:17]
     elif satellite == "Aqua":
-        flight_model = filename[13:16]
+        flight_model = file[13:16]
 
     platform = satellite + '-' + flight_model
 
-    # print("CERES Instrument:", platform)
+    print("CERES Instrument:", platform)
     return platform
 
 
@@ -106,7 +116,18 @@ def get_platform(filename):
 
 
 def read_ssf_geolocation(file_path):
-    """Reads geolocation info from file"""
+    """
+    ----------------------------------------------------------------------------
+    This function reads footprint-level geolocation information from
+    CERES Level 2 SSF file
+    ----------------------------------------------------------------------------
+    :param file_path: path to file
+    ----------------------------------------------------------------------------
+    :return: (1) fov_lat = FOV latitude          [float]
+             (2) fov_lon = FOV longitude         [float]
+             (3) sza = FOV SZA at surface        [float]
+             (4) obs_time = FOV observation time [float]
+    """
 
     from pyhdf import SD
     hdf = SD.SD(file_path)
@@ -120,12 +141,12 @@ def read_ssf_geolocation(file_path):
     fov_lon = longitude.get()
 
     time_of_obs = hdf.select("Time of observation")
-    time_obs = time_of_obs.get()
+    obs_time = time_of_obs.get()
 
     solar_zenith = hdf.select("CERES solar zenith at surface")
     sza = solar_zenith.get()
 
-    return fov_lat, fov_lon, time_obs, sza
+    return fov_lat, fov_lon, obs_time, sza
 
 
 # =====================================================================
@@ -133,11 +154,17 @@ def read_ssf_geolocation(file_path):
 
 def read_crs_geolocation(file_path):
     """
-    Reads geolocation information from file and converts
-    co-latitude to latitude for each CERES footprint/FOV
-    :param file_path: path to input file
-    :return: lat/lon of each FOV, pressure levels, and
-    the time of each observation
+    ----------------------------------------------------------------------------
+    This function reads footprint-level geolocation information from
+    CERES Level 2 CRS file
+    ----------------------------------------------------------------------------
+    :param file_path: path to  file
+    ----------------------------------------------------------------------------
+    :return: (1) fov_lat = FOV latitude          [float]
+             (2) fov_lon = FOV longitude         [float]
+             (3) pres_levs = FOV pressure levels [float]
+             (3) sza = FOV SZA at surface        [float]
+             (4) obs_time = FOV observation time [float]
     """
 
     from pyhdf import SD
@@ -152,15 +179,15 @@ def read_crs_geolocation(file_path):
     fov_lon = longitude.get()
 
     pressure_levels = hdf.select('Pressure levels')
-    pres_lev = pressure_levels.get()
+    pres_levs = pressure_levels.get()
 
     time_of_obs = hdf.select("Time of observation")
-    time_obs = time_of_obs.get()
+    obs_time = time_of_obs.get()
 
     solar_zenith = hdf.select("CERES solar zenith at surface")
     sza = solar_zenith.get()
 
-    return fov_lat, fov_lon, pres_lev, time_obs, sza
+    return fov_lat, fov_lon, pres_levs, obs_time, sza
 
 
 # ==============================================================================
@@ -168,19 +195,24 @@ def read_crs_geolocation(file_path):
 
 def read_ssf_var(file_path, vararg, fill):
     """
-    Read CERES SSF footprint variable
-
+    ----------------------------------------------------------------------------
+    This function reads variables from CERES Level 2 Single Scanner Footprint
+    official-release data file
+    ----------------------------------------------------------------------------
     :param file_path: path to file
-    :param vararg: variable argument
-    :param fill: fill option
-    :return: field, name, units
+    :param vararg:    variable argument
+    :param fill:      fill NaN value option
+    ----------------------------------------------------------------------------
+    :return: (1) field = variable data   [float]
+             (2) name = name of variable [string]
+             (3) units = variable units  [string]
     """
 
     import numpy as np
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # select variable
+    # select variable using integer index: vararg
     switch = {
         0: 'CERES downward SW surface flux - Model A',
         1: 'CERES downward LW surface flux - Model A',
@@ -210,22 +242,27 @@ def read_ssf_var(file_path, vararg, fill):
 
 
 def read_crs_var(file_path, vararg, levarg, fill):
-    """Select field at appropriate vertical level
-    from the official CERES CRS HDF file.
-
-    Function arguments:
-
-    (1) file_path = path to file
-    (2) vararg = variable argument and
-    (3) levarg = level argument
-    (4) fill = option to fill missing values
+    """
+    ----------------------------------------------------------------------------
+    This function reads variables from CERES Level 2 Cloud Radiative Swath
+    official-release data files
+    ----------------------------------------------------------------------------
+    :param file_path: path to file
+    :param vararg: variable argument
+    :param levarg: level argument
+    :param fill: fill NaN value option
+    ----------------------------------------------------------------------------
+    :return: (1) var_field = desired data    [float]
+             (2) var_name = name of variable [string]
+             (3) var_units = variable units  [string]
+             (4) lev_name = p level name     [string]
     """
 
     import numpy as np
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # select variable
+    # select variable using integer index: vararg
     switch = {
         0: 'Longwave flux - downward - total',
         1: 'Longwave flux - upward - total',
@@ -234,7 +271,7 @@ def read_crs_var(file_path, vararg, levarg, fill):
     }
     var_name = switch.get(vararg)
 
-    # select level
+    # select p level using integer index: levarg
     switch2 = {
         0: 'TOA',
         1: '70 mb',
@@ -267,22 +304,26 @@ def read_crs_var(file_path, vararg, levarg, fill):
 
 def read_crs_dev_var(file_path, vararg, levarg, fill):
     """
-    Select field at desired vertical level from
-    CERES CRS4 ***DEVELOPMENT*** code
-
-    Function arguments:
-
-    (1) file_path = path to file   [string]
-    (2) vararg = variable argument [int]
-    (3) levarg = level argument    [int]
-    (4) fill = fillvalues -> NaN   [logical]
+    ----------------------------------------------------------------------------
+    This function reads variables from the CERES Level 2 Cloud Radiative Swath
+    DEVELOPMENT data files - i.e., those produced by running the CRS4 .f90 code
+    ----------------------------------------------------------------------------
+    :param file_path: path to data file [string]
+    :param vararg: variable argument
+    :param levarg: level argument
+    :param fill: fill NaN value option
+    ----------------------------------------------------------------------------
+    :return: (1) var_field = variable field data  [float]
+             (2) var_name = variable name         [string]
+             (3) var_units = variable units       [string]
+             (4) lev_name = p level name          [string]
     """
 
     import numpy as np
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # select variable
+    # select variable using integer index: vararg
     switch = {
         0: 'UT_TOT_LW_DN',
         1: 'UT_TOT_LW_UP',
@@ -321,13 +362,15 @@ def read_crs_dev_var(file_path, vararg, levarg, fill):
 
 def set_colormap(cmap_name, typarg):
     """
+    ----------------------------------------------------------------------------
     Selects colormap from palettable library
-
-    Function arguments:
-
-    (1) colormap name from palettable
-    (2) colormap type: 0 for continuous, 1 for discrete
+    ----------------------------------------------------------------------------
+    :param cmap_name: name of colormap (from palettable)
+    :param typarg: 0 = continuous, 1 = discrete
+    ----------------------------------------------------------------------------
+    :return: colormap
     """
+
 
     switch = {
         0: "continuous",
@@ -355,26 +398,29 @@ def plot_swath(lon, lat, field,
                cmap, cmap_lims, date, nightshade,
                date_str, title_str):
     """
-    Plots map of CERES footprint swath data.
-
-    Function arguments:
-
-    (1) longitude array    [float]
-    (2) latitude array     [float]
-    (3) field to plot      [string]
-    (4) variable name      [string]
-    (5) level name         [string]
-    (6) variable units     [string]
-    (7) number of rows     [int]
-    (8) number of columns  [int]
-    (9) central longitude  [float]
-    (10) colormap          [object]
-    (11) colormap limits   [tuple]
-    (12) date info         [object]
-    (13) nightshade option [object]
-    (14) date string       [string]
-    (15) title string      [string]
+    ----------------------------------------------------------------------------
+    This function plots a swath of footprint-level data
+    FLASHFlux, SSF, or CRS
+    ----------------------------------------------------------------------------
+    :param lon: FOV longitude
+    :param lat: FOV latitude
+    :param field: variable
+    :param varname: variable name
+    :param levname: level name
+    :param varunits: variable units
+    :param nrows: number of rows
+    :param ncols: number of columns
+    :param cen_lon: central longitude
+    :param cmap: colormap
+    :param cmap_lims: colormap limits
+    :param date: date info for nightshade
+    :param nightshade: whether to use nighshade feature
+    :param date_str: date string
+    :param title_str: title string
+    ----------------------------------------------------------------------------
+    :return: plot of the data
     """
+
     import numpy as np
     import matplotlib.pyplot as plt
     import cartopy.crs as ccrs
@@ -438,11 +484,14 @@ def plot_swath(lon, lat, field,
 
 def swath_difference(field2, field1, day_only, sza):
     """
+    ----------------------------------------------------------------------------
 
+    ----------------------------------------------------------------------------
     :param field2:
     :param field1:
     :param day_only:
     :param sza:
+    ----------------------------------------------------------------------------
     :return:
     """
 
@@ -466,6 +515,21 @@ def swath_difference(field2, field1, day_only, sza):
 
 
 def swath_histogram_scatterplot(field1, field2, varname, levname, time_info, platform, day_only, sza):
+    """
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    :param field1:
+    :param field2:
+    :param varname:
+    :param levname:
+    :param time_info:
+    :param platform:
+    :param day_only:
+    :param sza:
+    ----------------------------------------------------------------------------
+    :return:
+    """
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -524,10 +588,12 @@ def swath_histogram_scatterplot(field1, field2, varname, levname, time_info, pla
 
 def print_nc_file_info(filepath):
     """
-    Function prints out information about variables
-    in the input netCDF file
-    :param filepath: path to netCDF file
-    :return: print to screen
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    :param filepath:
+    ----------------------------------------------------------------------------
+    :return:
     """
     print('====================================')
     print('\t\tVariables in file...')
@@ -550,13 +616,12 @@ def print_nc_file_info(filepath):
 
 def read_ebaf_geolocation(filepath):
     """
-    Reads lat, lon info from file
-    :param filepath: path to input file
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    :param filepath:
+    ----------------------------------------------------------------------------
     :return:
-    (1) latitude vector
-    (2) longitude vector
-    (3) lat grid
-    (4) lon grid
     """
 
     import numpy as np
@@ -583,9 +648,12 @@ def read_ebaf_geolocation(filepath):
 
 def read_ebaf_var(filepath, variable):
     """
+    ----------------------------------------------------------------------------
     Extract variable data from EBAF file
+    ----------------------------------------------------------------------------
     :param filepath: input EBAF file
     :param var: variable to extract from file
+    ----------------------------------------------------------------------------
     :return: array of variable var
     """
 
@@ -608,12 +676,14 @@ def read_ebaf_var(filepath, variable):
 
 def compute_monthly_anomalies(field, fieldname):
     """
+    ----------------------------------------------------------------------------
     (1) Compute long-term average for each calendar month, i.e., the monthly mean seasonal cycle
     (2) Subtract the appropriate long-term means from the corresponding monthly fields to get monthly anomalies
+    ----------------------------------------------------------------------------
     :param field: variable for which to compute the climatology/anomaly [lat,lon,time]
-    :return:
-    (1) time series of monthly anomalies at each grid box
-    (2) monthly mean seasonal cycle at each grid box
+    ----------------------------------------------------------------------------
+    :return: (1) time series of monthly anomalies at each grid box
+             (2) monthly mean seasonal cycle at each grid box
     """
     import numpy as np
     import matplotlib.pyplot as plt
@@ -676,8 +746,12 @@ def compute_monthly_anomalies(field, fieldname):
 
 def cos_lat_weight(lat_vector):
     """
-    Returns cos(lat) weight array [size nlat x nlon]
+    ----------------------------------------------------------------------------
+    This function takes a latitude array and computes a matrix of cos(lat)
+    weights for performing area-weighted average values of a field
+    ----------------------------------------------------------------------------
     :param lat_vector: vector of latitudes
+    ----------------------------------------------------------------------------
     :return: matrix of cos(lat) weights
     """
 
@@ -709,8 +783,12 @@ def cos_lat_weight(lat_vector):
 
 def compute_annual_climatology(field):
     """
-    Compute annual mean and standard deviation of field
+    ----------------------------------------------------------------------------
+    This function calculates the long-term mean and standard deviation of the
+    input field
+    ----------------------------------------------------------------------------
     :param field: variable under consideration
+    ----------------------------------------------------------------------------
     :return: long-term mean and standard deviation
     """
 
@@ -728,45 +806,48 @@ def compute_annual_climatology(field):
 # ========================================================================
 
 
-def compute_regional_averages(field, latitude, w):
+def compute_regional_averages(field, latitude, weights):
     """
-    Computes weighted regional averages of input field
+    ----------------------------------------------------------------------------
+    Computes regional area-weighted averages of input field
+    ----------------------------------------------------------------------------
     :param field: field to be averaged
+    ----------------------------------------------------------------------------
     :return: prints regional averages
     """
     import numpy as np
 
     # Global mean climatological total cloud fraction
-    global_avg = np.average(field, weights=w)
+    global_avg = np.average(field, weights=weights)
     print('\n', 'Global average:', global_avg, '\n')
 
     # 60Sto90S mean climatological total cloud fraction
-    sh60to90_avg = np.average(field[0:30, :], weights=w[0:30, :])
+    sh60to90_avg = np.average(field[0:30, :], weights=weights[0:30, :])
     print('Antarctic (60S-90S) average:', sh60to90_avg)
     print('Latitude range:', latitude[0:30], '\n')
 
     # SH mid-latitude climatological total cloud fraction
-    sh30to60_avg = np.average(field[30:60, :], weights=w[30:60, :])
+    sh30to60_avg = np.average(field[30:60, :], weights=weights[30:60, :])
     print('S mid-latitude (30S-60S) average:', sh30to60_avg)
     print('Latitude range:', latitude[30:60], '\n')
 
     # SH tropical mean climatology
-    sh0to30_avg = np.average(field[60:90, :], weights=w[60:90, :])
+    sh0to30_avg = np.average(field[60:90, :], weights=weights[60:90, :])
     print('S tropical (30S-0) average:', sh0to30_avg)
     print('Latitude range:', latitude[60:90], '\n')
 
     # NH tropical mean climatological total cloud fraction
-    nh0to30_avg = np.average(field[90:120, :], weights=w[90:120, :])
+    nh0to30_avg = np.average(field[90:120, :], weights=weights[90:120, :])
     print('N tropical (0-30N) average:', nh0to30_avg)
     print('Latitude range:', latitude[90:120], '\n')
 
     # NH tropical mean climatological total cloud fraction
-    nh30to60_avg = np.average(field[120:150, :], weights=w[120:150, :])
+    nh30to60_avg = np.average(field[120:150, :], weights=weights[120:150, :])
     print('N mid-latitude (30N-60N) average:', nh30to60_avg)
     print('Latitude range:', latitude[120:150], '\n')
 
     # Arctic mean climatological total cloud fraction
-    nh60to90_avg = np.average(field[150:180, :], weights=w[150:180, :])
+    nh60to90_avg = np.average(field[150:180, :], weights=weights[150:180, :])
     print('Arctic 60N-90N average:', nh60to90_avg)
     print('Latitude range:', latitude[150:180], '\n')
 
@@ -778,12 +859,14 @@ def compute_regional_averages(field, latitude, w):
 
 def composite_difference(field, ind1, ind2):
     """
-    Calculates composite means and then takes
-    their difference to illustrate change between
-    two time periods
+    ----------------------------------------------------------------------------
+    Calculates composite means and then takes their difference to illustrate
+    change between two time periods
+    ----------------------------------------------------------------------------
     :param field: field to average
     :param ind1: indices for first time period
     :param ind2: indices for second time period
+    ----------------------------------------------------------------------------
     :return: difference between composites
     """
     import numpy as np
@@ -802,6 +885,15 @@ def composite_difference(field, ind1, ind2):
 
 
 def simple_regression(x_anomalies, y_anomalies):
+    """
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    :param x_anomalies:
+    :param y_anomalies:
+    ----------------------------------------------------------------------------
+    :return:
+    """
 
     import numpy as np
 
@@ -822,6 +914,13 @@ def simple_regression(x_anomalies, y_anomalies):
 
 
 def multiple_regression_old(x1_anomalies, x2_anomalies, y_anomalies):
+    """
+
+    :param x1_anomalies:
+    :param x2_anomalies:
+    :param y_anomalies:
+    :return:
+    """
 
     import numpy as np
 
@@ -842,9 +941,12 @@ def multiple_regression_old(x1_anomalies, x2_anomalies, y_anomalies):
 
 def multiple_regression(y_anomalies, *x_anomalies):
     """
+    ----------------------------------------------------------------------------
 
+    ----------------------------------------------------------------------------
     :param y_anomalies:
     :param x_anomalies:
+    ----------------------------------------------------------------------------
     :return:
     """
 
@@ -878,6 +980,24 @@ def global_map(lon, lat, field,
                varname, varunits,
                nrows, ncols, cen_lon,
                cmap, cmap_lims, ti_str):
+    """
+    ----------------------------------------------------------------------------
+
+    ----------------------------------------------------------------------------
+    :param lon:
+    :param lat:
+    :param field:
+    :param varname:
+    :param varunits:
+    :param nrows:
+    :param ncols:
+    :param cen_lon:
+    :param cmap:
+    :param cmap_lims:
+    :param ti_str:
+    ----------------------------------------------------------------------------
+    :return:
+    """
 
     import matplotlib.pyplot as plt
     import cartopy.crs as ccrs

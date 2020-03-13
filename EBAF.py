@@ -81,17 +81,21 @@ tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_nam
 #                 varname='', varunits=r'$W$ $m^{-2}$ $\%^{-1}$', nrows=1, ncols=1, cen_lon=180,
 #                 cmap=cmap, cmap_lims=(-2, 2), ti_str='LW flux regressed on total CF')
 
-coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cet_anomalies)
+
+print('Performing multiple linear regression of TOA LW flux on \\'
+      'cloud fraction, effective pressure, effective temperature...')
+
+coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cep_anomalies, cet_anomalies)
 
 ceres.global_map(lon=lon, lat=lat, field=coefficients[0,:,:],
-                  varname='', varunits=r'$W$ $m^{-2}$ $\%^{-1}$', nrows=1, ncols=1, cen_lon=180,
+                  varname='', varunits=r'W m$^{-2}$ %$^{-1}$', nrows=1, ncols=1, cen_lon=180,
                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$TCF')
 
 ceres.global_map(lon=lon, lat=lat, field=coefficients[1,:,:],
-                  varname='', varunits=r'$W$ $m^{-2}$ $\%^{-1}$', nrows=1, ncols=1, cen_lon=180,
+                  varname='', varunits=r'W m$^{-2}$ hPa$^{-1}$', nrows=1, ncols=1, cen_lon=180,
                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CEP')
 
 ceres.global_map(lon=lon, lat=lat, field=coefficients[2,:,:],
-                  varname='', varunits=r'$W$ $m^{-2}$ $\%^{-1}$', nrows=1, ncols=1, cen_lon=180,
+                  varname='', varunits=r'W m$^{-2}$ K$^{-1}$', nrows=1, ncols=1, cen_lon=180,
                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CET')
 
