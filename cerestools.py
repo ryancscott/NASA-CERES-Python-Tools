@@ -1,6 +1,6 @@
 # ==============================================================================
 #
-#                        *****-NASA CERES PYTHON TOOLS-*****
+#                       ***** NASA CERES PYTHON TOOLS *****
 #
 # ==============================================================================
 #
@@ -8,15 +8,15 @@
 #
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Purpose: This library contains Python functions to manipulate and analyze data
-#          from the NASA Clouds and the Earth's Radiant Energy System (CERES)
-#          satellite mission, including both footprint-level swath and gridded
-#          fields. Included are various functions that can be used for data
-#          development purposes and analysis of officially released products.
+# Purpose: This library contains Python functions to read, manipulate, and analyze
+#          data from the NASA Clouds and the Earth's Radiant Energy System (CERES)
+#          satellite mission including footprint-level swath and gridded fields
+#          Included are various functions that can be used for data development
+#          purposes and analysis of officially released products.
 #
 # Usage: import cerestools as ceres
 #
-# Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime
+# Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
 #
 # Date: March 11, 2020
 #
@@ -193,6 +193,44 @@ def read_crs_geolocation(file_path):
 # ==============================================================================
 
 
+def read_crs_geolocation_dev(file_path):
+    """
+    ----------------------------------------------------------------------------
+    This function reads footprint-level geolocation information from
+    CERES Level 2 CRS file
+    ----------------------------------------------------------------------------
+    :param file_path: path to  file
+    ----------------------------------------------------------------------------
+    :return: (1) fov_lat = FOV latitude          [float]
+             (2) fov_lon = FOV longitude         [float]
+             (3) pres_levs = FOV pressure levels [float]
+             (3) sza = FOV SZA at surface        [float]
+             (4) obs_time = FOV observation time [float]
+    """
+
+    from pyhdf import SD
+    hdf = SD.SD(file_path)
+    # print(hdf.datasets())
+
+    colatitude = hdf.select('COLAT_SFC')
+    colat = colatitude.get()
+    fov_lat = 90 - colat
+
+    longitude = hdf.select('LONG_SFC')
+    fov_lon = longitude.get()
+
+    pressure_levels = hdf.select('Pressure')
+    pres_levs = pressure_levels.get()
+
+    time_of_obs = hdf.select("JULTIM")
+    obs_time = time_of_obs.get()
+
+    return fov_lat, fov_lon, pres_levs, obs_time
+
+
+# ==============================================================================
+
+
 def read_ssf_var(file_path, vararg, fill):
     """
     ----------------------------------------------------------------------------
@@ -302,11 +340,11 @@ def read_crs_var(file_path, vararg, levarg, fill):
 # ==============================================================================
 
 
-def read_crs_dev_var(file_path, vararg, levarg, fill):
+def read_crs_var_dev(file_path, vararg, levarg, fill):
     """
     ----------------------------------------------------------------------------
-    This function reads variables from the CERES Level 2 Cloud Radiative Swath
-    DEVELOPMENT data files - i.e., those produced by running the CRS4 .f90 code
+    This function reads data from the CERES Level 2 Cloud Radiative Swath
+    DEVELOPMENT files - those produced by running the CRS4 .f90 code
     ----------------------------------------------------------------------------
     :param file_path: path to data file [string]
     :param vararg: variable argument
@@ -328,16 +366,18 @@ def read_crs_dev_var(file_path, vararg, levarg, fill):
         0: 'UT_TOT_LW_DN',
         1: 'UT_TOT_LW_UP',
         2: 'UT_TOT_SW_DN',
-        3: 'UT_TOT_SW_UP'
+        3: 'UT_TOT_SW_UP',
+        4: 'MATCH_AOT'
     }
     var_name = switch.get(vararg)
 
     # select level
     switch2 = {
+        -1: '  ',
         0: 'TOA',
         1: 'surface'
     }
-    lev_name = switch.get(levarg)
+    lev_name = switch2.get(levarg)
 
     print("Getting", switch.get(vararg, "N/A"), "at:",
           switch2.get(levarg, "N/A"))
@@ -352,7 +392,10 @@ def read_crs_dev_var(file_path, vararg, levarg, fill):
         variable[variable == var_fill] = np.nan
 
     # get field at appropriate vertical level
-    var_field = variable[:, levarg]
+    if levarg < 0:
+        var_field = variable
+    elif levarg >= 0:
+        var_field = variable[:, levarg]
 
     return var_field, var_name, var_units, lev_name
 
@@ -534,7 +577,7 @@ def swath_histogram_scatterplot(field1, field2, varname, levname, time_info, pla
     import numpy as np
     import matplotlib.pyplot as plt
 
-    swath_diff = compute_swath_diff(field2=field2, field1=field1, day_only=day_only, sza=sza)
+    swath_diff = swath_difference(field2=field2, field1=field1, day_only=day_only, sza=sza)
 
     mean_diff = np.nanmean(swath_diff)
     sigma_diff = np.nanstd(swath_diff)
@@ -913,13 +956,20 @@ def simple_regression(x_anomalies, y_anomalies):
 # ========================================================================
 
 
-def multiple_regression_old(x1_anomalies, x2_anomalies, y_anomalies):
+def multiple_regression_2xi(x1_anomalies, x2_anomalies, y_anomalies):
     """
-
-    :param x1_anomalies:
-    :param x2_anomalies:
-    :param y_anomalies:
-    :return:
+    ----------------------------------------------------------------------------
+    This function performs multiple-linear regression analysis of the
+    y_anomaly field (dependent variable) onto x1_anomaly and x2_anomaly fields
+    (independent variables) at each grid box. It returns regression coefficient
+    (beta_i, i = 1,2) maps for x1 and x2. The coefficients represent the partial
+    derivative (dy/dx_i) response of y to independent changes in x_i, with the
+    other x_i held fixed.
+    ----------------------------------------------------------------------------
+    :param x1_anomalies: x1 anomaly field (independent variable)
+    :param x2_anomalies: x2 anomaly field (independent variable)
+    :param y_anomalies:   y anomaly field (  dependent variable)
+    :return: matrix of coefficients
     """
 
     import numpy as np
@@ -938,40 +988,61 @@ def multiple_regression_old(x1_anomalies, x2_anomalies, y_anomalies):
 
 # ========================================================================
 
+# TO DO: add option to standardize *x_anomalies time series...
+
 
 def multiple_regression(y_anomalies, *x_anomalies):
     """
     ----------------------------------------------------------------------------
-
+    This function performs multiple-linear regression analysis of y_anomalies
+    (dependent variable) onto one or more x_anomaly fields (independent variables)
+    at each grid box. It returns regression coefficient (beta_i) maps for each
+    variable x_i. The beta_i represent the partial derivative (dy/dx_i) response
+    of y to independent changes in x_i, with all of the other x_i held fixed.
+    The star before the x_anomalies parameter means that any number of predictors
+    can be input to the function
     ----------------------------------------------------------------------------
-    :param y_anomalies:
-    :param x_anomalies:
+    :param y_anomalies:   dependent variable anomaly field [nlat x nlon]
+    :param x_anomalies: independent variable anomaly field [* x nlat x nlon]
     ----------------------------------------------------------------------------
-    :return:
+    :return: coefficient matrix [number of x fields input + 1 x nlat x nlon]
     """
 
     import numpy as np
 
+    # first dimension of coefficient matrix based on
+    # the number of "x_anomalies" variables included
     c = len(x_anomalies) + 1
+
+    # initialize coefficient matrix, size: c x 180 x 360
     coefficients = np.zeros([c, np.shape(x_anomalies[1])[1], np.shape(x_anomalies[1])[2]])
 
+    # loop over each grid box
+    # coefficients.shape[0] = c
     for i in range(coefficients.shape[1]):
         for j in range(coefficients.shape[2]):
 
             # empty array for predictor variable time series
-            x = np.empty([len(x_anomalies), len(x_anomalies[1])])
+            # size: number of independent variables x length of time series
+            x = np.empty([len(x_anomalies), len(x_anomalies[0])])
+            # print(len(x_anomalies[0]))
 
             # add row for each predictor variable
-            for k, x_anoms in enumerate(x_anomalies):
-                x[k, :] = x_anoms[:, i, j]
+            for k, x_anom in enumerate(x_anomalies):
+                x[k, :] = x_anom[:, i, j]
 
             y = y_anomalies[:, i, j]
             a = np.vstack([x, np.ones(len(x[0, :]))]).T
+
+            if i == 1 and j == 1:
+                print(a)
+                print(a.shape[0])
 
             # compute coefficients
             coefficients[:, i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
 
     return coefficients
+
 
 # ========================================================================
 
@@ -982,21 +1053,21 @@ def global_map(lon, lat, field,
                cmap, cmap_lims, ti_str):
     """
     ----------------------------------------------------------------------------
-
+    This function plots a map of data
     ----------------------------------------------------------------------------
-    :param lon:
-    :param lat:
-    :param field:
-    :param varname:
-    :param varunits:
-    :param nrows:
-    :param ncols:
-    :param cen_lon:
-    :param cmap:
-    :param cmap_lims:
-    :param ti_str:
+    :param lon: longitude matrix
+    :param lat: latitude matrix
+    :param field: data matrix
+    :param varname: variable name
+    :param varunits: variable units
+    :param nrows: number of axis rows
+    :param ncols: number of axis cols
+    :param cen_lon: map central longitude
+    :param cmap: colormap
+    :param cmap_lims: colormap limits
+    :param ti_str: title string
     ----------------------------------------------------------------------------
-    :return:
+    :return: plots the map
     """
 
     import matplotlib.pyplot as plt

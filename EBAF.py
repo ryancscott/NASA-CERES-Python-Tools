@@ -1,5 +1,5 @@
 # ========================================================================
-# Developing essential tools to manipulate/analyze CERES gridded data
+# Developing tools to manipulate/analyze CERES gridded data
 # ========================================================================
 
 
@@ -47,7 +47,6 @@ mean_cep, sigma_cep = ceres.compute_annual_climatology(cep)
 mean_cet, sigma_cet = ceres.compute_annual_climatology(cet)
 mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 
-
 # ceres.global_map(lon=lon, lat=lat, field=mean_lwf,
 #                  varname=lwf_name, varunits=lwf_units, nrows=1, ncols=1, cen_lon=180,
 #                  cmap=cmap, cmap_lims=(0, 300), ti_str='CERES-EBAF Ed4.1')
@@ -56,15 +55,13 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 #                  varname=tcf_name, varunits=tcf_units, nrows=1, ncols=1, cen_lon=180,
 #                  cmap=cmap, cmap_lims=(0, 100), ti_str='CERES-EBAF Ed4.1')
 #
-# ceres.global_map(lon=lon, lat=lat, field=mean_tau,
-#                  varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
-#                  cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
+ceres.global_map(lon=lon, lat=lat, field=mean_tau,
+                 varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
+                 cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
 
 
 # compute weights for area averaging
 #w = ceres.cos_lat_weight(latitude)
-
-
 # compute area-weighted averages of the long-term mean
 #ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
 
@@ -82,7 +79,7 @@ tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_nam
 #                 cmap=cmap, cmap_lims=(-2, 2), ti_str='LW flux regressed on total CF')
 
 
-print('Performing multiple linear regression of TOA LW flux on \\'
+print('Performing multiple linear regression of TOA LW flux on \n'
       'cloud fraction, effective pressure, effective temperature...')
 
 coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cep_anomalies, cet_anomalies)
