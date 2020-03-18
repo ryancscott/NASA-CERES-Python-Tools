@@ -9,16 +9,17 @@
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
 # Purpose: This library contains Python functions to read, manipulate, and analyze
-#          data from the NASA Clouds and the Earth's Radiant Energy System (CERES)
-#          satellite mission including footprint-level swath and gridded fields
-#          Included are various functions that can be used for data development
-#          purposes and analysis of officially released products.
+#          data from NASA's Clouds and the Earth's Radiant Energy System (CERES)
+#          satellite mission, including footprint-level and TISA gridded fields.
+#          Functions are included for both data development purposes (_dev)
+#          as well as for the analysis of officially released data products.
 #
 # Usage: import cerestools as ceres
 #
 # Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
+# Recommend installing the above libraries using pip, conda, or using an IDE
 #
-# Date: March 11, 2020
+# Last Updated: March 18, 2020
 #
 # ==============================================================================
 # FOOTPRINT-LEVEL
@@ -35,7 +36,7 @@
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram & scatter plot of swath diff
 # ----------------
-# GRIDDED FIELDS
+# TISA GRIDDED FIELDS
 # ----------------
 # print_nc_file_info          <- print info about variables in netCDF file
 # read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
@@ -367,7 +368,8 @@ def read_crs_var_dev(file_path, vararg, levarg, fill):
         1: 'UT_TOT_LW_UP',
         2: 'UT_TOT_SW_DN',
         3: 'UT_TOT_SW_UP',
-        4: 'MATCH_AOT'
+        4: 'MATCH_AOT',
+        5: 'SFC_HGT'
     }
     var_name = switch.get(vararg)
 
@@ -497,7 +499,7 @@ def plot_swath(lon, lat, field,
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
         ax.set_extent([-180, 180, -90, 90], projection)
-        ax.text(0.5, -0.1, varname + ' - ' + levname + ' \n' + varunits,
+        ax.text(0.5, -0.1, varname + '  -  ' + levname + '  -  ' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
                 transform=ax.transAxes, fontsize=10)
