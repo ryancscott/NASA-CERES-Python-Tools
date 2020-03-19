@@ -29,22 +29,23 @@ print('============================================')
 lat, lon, pres_levs, obs_tim = ceres.read_crs_geolocation_dev(file_path)
 
 # Top-of-atmosphere fluxes
-lwut, lwut_name, lwut_units, lwut_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=1, levarg=0, fill=1)
-swdt, swdt_name, swdt_units, swdt_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=2, levarg=0, fill=1)
-swut, swut_name, swut_units, swut_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=3, levarg=0, fill=1)
+swdt, swdt_name, swdt_units, swdt_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=0, levarg=0, fill=1)
+swut, swut_name, swut_units, swut_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=1, levarg=0, fill=1)
+lwut, lwut_name, lwut_units, lwut_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=3, levarg=0, fill=1)
 
 # Surface fluxes
-lwds, lwds_name, lwds_units, lwds_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=0, levarg=1, fill=1)
-lwus, lwus_name, lwus_units, lwus_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=1, levarg=1, fill=1)
-swds, swds_name, swds_units, swds_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=2, levarg=1, fill=1)
-swus, swus_name, swus_units, swus_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=3, levarg=1, fill=1)
+swds, swds_name, swds_units, swds_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=0, levarg=1, fill=1)
+swus, swus_name, swus_units, swus_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=1, levarg=1, fill=1)
+lwds, lwds_name, lwds_units, lwds_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=2, levarg=1, fill=1)
+lwus, lwus_name, lwus_units, lwus_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=3, levarg=1, fill=1)
 
-# No particular level OR column integrated parameters
-aot, aot_name, aot_units, aot_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=4, levarg=-1, fill=1)
-hgts, hgts_name, hgts_units, hgts_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=5, levarg=-1, fill=1)
+# Single level OR column integrated parameters
+aot, aot_name, aot_units, aot_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=16, levarg=-1, fill=1)
+hgts, hgts_name, hgts_units, hgts_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=17, levarg=-1, fill=1)
 
-# Date info
+# Date information
 date, date_str = ceres.get_date(file=file)
+
 
 print('============================================')
 print('\tPlotting Data...\t\t\t')

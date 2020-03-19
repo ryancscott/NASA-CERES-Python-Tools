@@ -364,18 +364,34 @@ def read_crs_var_dev(file_path, vararg, levarg, fill):
 
     # select variable using integer index: vararg
     switch = {
-        0: 'UT_TOT_LW_DN',
-        1: 'UT_TOT_LW_UP',
-        2: 'UT_TOT_SW_DN',
-        3: 'UT_TOT_SW_UP',
-        4: 'MATCH_AOT',
-        5: 'SFC_HGT'
+        0: 'UT_CLR_SW_DN',
+        1: 'UT_CLR_SW_UP',
+        2: 'UT_CLR_LW_DN',
+        3: 'UT_CLR_LW_UP',
+
+        4: 'UT_TOT_SW_DN',
+        5: 'UT_TOT_SW_UP',
+        6: 'UT_TOT_LW_DN',
+        7: 'UT_TOT_LW_UP',
+
+        8: 'UT_PRS_SW_DN',
+        9: 'UT_PRS_SW_UP',
+        10: 'UT_PRS_LW_DN',
+        11: 'UT_PRS_LW_UP',
+
+        12: 'UT_TNA_SW_DN',
+        13: 'UT_TNA_SW_UP',
+        14: 'UT_TNA_LW_DN',
+        15: 'UT_TNA_LW_UP',
+
+        16: 'MATCH_AOT',
+        17: 'SFC_HGT'
     }
     var_name = switch.get(vararg)
 
     # select level
     switch2 = {
-        -1: '  ',
+        -1: '',
         0: 'TOA',
         1: 'surface'
     }
