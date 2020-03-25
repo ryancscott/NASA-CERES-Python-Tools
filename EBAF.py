@@ -38,7 +38,7 @@ cet, cet_name, cet_units = ceres.read_ebaf_var(filepath=file_path, variable='cld
 tau, tau_name, tau_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtau_total_day_mon')
 
 import numpy as np
-tau = np.log(tau)
+#tau = np.log(tau)
 
 # compute the long-term mean and standard deviation
 mean_lwf, sigma_lwf = ceres.compute_annual_climatology(lwf)
@@ -61,17 +61,17 @@ ceres.global_map(lon=lon, lat=lat, field=mean_tau,
 
 
 # compute weights for area averaging
-#w = ceres.cos_lat_weight(latitude)
+weights = ceres.cos_lat_weight(latitude)
 # compute area-weighted averages of the long-term mean
 #ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
 
 
 # compute anomalies by removing long-term monthly means
 lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
-tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
-cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
-cet_anomalies, cet_seasonal_cycle = ceres.compute_monthly_anomalies(cet, cet_name)
-tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_name)
+# tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
+# cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
+# cet_anomalies, cet_seasonal_cycle = ceres.compute_monthly_anomalies(cet, cet_name)
+# tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_name)
 
 #lwf_tcf_coefs = ceres.simple_regression(tcf_anomalies, lwf_anomalies)
 #ceres.global_map(lon=lon, lat=lat, field=lwf_tcf_coefs,
@@ -79,20 +79,48 @@ tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_nam
 #                 cmap=cmap, cmap_lims=(-2, 2), ti_str='LW flux regressed on total CF')
 
 
-print('Performing multiple linear regression of TOA LW flux on \n'
-      'cloud fraction, effective pressure, effective temperature...')
+# print('Performing multiple linear regression of TOA LW flux on \n'
+#       'cloud fraction, effective pressure, effective temperature...')
+#
+# coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cep_anomalies)
+#
+# ceres.global_map(lon=lon, lat=lat, field=coefficients[0,:,:],
+#                   varname='', varunits=r'W m$^{-2}$ %$^{-1}$', nrows=1, ncols=1, cen_lon=180,
+#                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$TCF')
+#
+# ceres.global_map(lon=lon, lat=lat, field=coefficients[1,:,:],
+#                   varname='', varunits=r'W m$^{-2}$ hPa$^{-1}$', nrows=1, ncols=1, cen_lon=180,
+#                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CEP')
 
-coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cep_anomalies, cet_anomalies)
 
-ceres.global_map(lon=lon, lat=lat, field=coefficients[0,:,:],
-                  varname='', varunits=r'W m$^{-2}$ %$^{-1}$', nrows=1, ncols=1, cen_lon=180,
-                  cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$TCF')
+print(lwf_anomalies.shape)
 
-ceres.global_map(lon=lon, lat=lat, field=coefficients[1,:,:],
-                  varname='', varunits=r'W m$^{-2}$ hPa$^{-1}$', nrows=1, ncols=1, cen_lon=180,
-                  cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CEP')
 
-ceres.global_map(lon=lon, lat=lat, field=coefficients[2,:,:],
-                  varname='', varunits=r'W m$^{-2}$ K$^{-1}$', nrows=1, ncols=1, cen_lon=180,
-                  cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CET')
 
+def global_mean_time_series(field, weight):
+    """
+    ----------------------------------------------------------------------------
+    This function calculates a time series of the global area-weighted
+    [by cos(lat)] mean of the input field
+    ----------------------------------------------------------------------------
+    :param field: input field [ntime x nlat x nlon]
+    :param weight: cos(lat) weight matrix [nlat x nlon]
+    ----------------------------------------------------------------------------
+    :return:
+    """
+    import matplotlib.pyplot as plt
+
+    mean_time_series = np.empty(shape=field.shape[0])
+    for i in range(236):
+        field1 = field[i, :, :]
+        mean_time_series[i] = np.average(field1, weights=weight)
+        print(mean_time_series[i])
+
+    # first set of axes
+    plt.plot(mean_time_series, label='Global Mean Anomalies')
+    plt.legend(fontsize=10)
+    plt.show()
+    return
+
+
+global_mean_time_series(field=lwf, weight=weights)

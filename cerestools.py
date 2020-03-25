@@ -1,6 +1,6 @@
 # ==============================================================================
 #
-#                       ***** NASA CERES PYTHON TOOLS *****
+#                   -----***** NASA CERES PYTHON TOOLS *****-----
 #
 # ==============================================================================
 #
@@ -8,22 +8,25 @@
 #
 # Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Purpose: This library contains Python functions to read, manipulate, and analyze
-#          data from NASA's Clouds and the Earth's Radiant Energy System (CERES)
-#          satellite mission, including footprint-level and TISA gridded fields.
-#          Functions are included for both data development purposes (_dev)
-#          as well as for the analysis of officially released data products.
+# Purpose:  This library contains Python 3 functions to read, manipulate, and
+#           analyze data from the National Aeronautics and Space Administration
+#           (NASA) Clouds and the Earth's Radiant Energy System (CERES)
+#           Earth Radiation Budget (ERB) satellite mission, including both
+#           footprint-level swath and gridded time-interpolated and spatially
+#           averaged (TISA) fields. Functions are provided for both data
+#           development purposes (*_dev) as well as the analysis of official
+#           release data products. See function descriptions below for more info.
 #
 # Usage: import cerestools as ceres
 #
-# Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
-# Recommend installing the above libraries using pip, conda, or using an IDE
+# Dependencies: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
+# I recommend installing the above libraries using pip, conda, or an IDE
 #
 # Last Updated: March 18, 2020
 #
 # ==============================================================================
 # FOOTPRINT-LEVEL
-# ----------------
+#  ----------------
 # get date                    <- get the year, month, day, hour from input file
 # get platform                <- get the satellite and instrument name
 # read_ssf_geolocation        <- get footprint lat, lon, etc. from SSF file
@@ -35,9 +38,9 @@
 # set_colormap                <- set colormap from palettable library
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram & scatter plot of swath diff
-# ----------------
+# -------------------
 # TISA GRIDDED FIELDS
-# ----------------
+# -------------------
 # print_nc_file_info          <- print info about variables in netCDF file
 # read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
 # read_ebaf_var               <- read field variable from EBAF file
@@ -46,9 +49,17 @@
 # compute_annual_climatology  <- compute long-term mean and std dev (sigma)
 # compute_regional_averages   <- compute area-weighted mean for various regions
 # composite_difference        <- compute composite mean difference
+# global_mean_time_series     <- compute area-weighted mean time series
 # simple_regression           <- regress field on another field
 # multiple_regression         <- regress field on multiple other fields
 # global_map                  <- plot map of gridded field
+#
+#
+# -------------------
+# Under development :
+# -------------------
+# area_weighted_mean_time_series     <- calculate mean over region and plot time series
+# compute_linear_trend               <- fit linear trend
 # ==============================================================================
 
 
@@ -56,8 +67,8 @@ def get_date(file):
     """
     ----------------------------------------------------------------------------
     This function reads input file yyyymmddhh information and transforms
-    the date string into a readable form for plotting. It also outputs the date
-    for ingestion by the cartopy NightShade function
+    the date string into a readable form for plotting. It also outputs date
+    information for ingestion by the cartopy NightShade function
     ----------------------------------------------------------------------------
     :param file: input file
     ----------------------------------------------------------------------------
@@ -344,8 +355,8 @@ def read_crs_var(file_path, vararg, levarg, fill):
 def read_crs_var_dev(file_path, vararg, levarg, fill):
     """
     ----------------------------------------------------------------------------
-    This function reads data from the CERES Level 2 Cloud Radiative Swath
-    DEVELOPMENT files - those produced by running the CRS4 .f90 code
+    This function reads data from CERES Level 2 Cloud Radiative Swath
+    DEVELOPMENT files - those I produce by running the CRS4 .f90 code on AMI
     ----------------------------------------------------------------------------
     :param file_path: path to data file [string]
     :param vararg: variable argument
@@ -385,13 +396,14 @@ def read_crs_var_dev(file_path, vararg, levarg, fill):
         15: 'UT_TNA_LW_UP',
 
         16: 'MATCH_AOT',
-        17: 'SFC_HGT'
+        17: 'SFC_HGT',
+        18: 'SZEN_TOA'
     }
     var_name = switch.get(vararg)
 
     # select level
     switch2 = {
-        -1: '',
+        -1: '-',
         0: 'TOA',
         1: 'surface'
     }
@@ -921,8 +933,8 @@ def compute_regional_averages(field, latitude, weights):
 def composite_difference(field, ind1, ind2):
     """
     ----------------------------------------------------------------------------
-    Calculates composite means and then takes their difference to illustrate
-    change between two time periods
+    This function calculates the composite mean of 'field' for two different
+    time period and then takes their difference to illustrate the field change.
     ----------------------------------------------------------------------------
     :param field: field to average
     :param ind1: indices for first time period
@@ -940,6 +952,35 @@ def composite_difference(field, ind1, ind2):
     composite_diff = np.subtract(mean_field2, mean_field1)
 
     return composite_diff
+
+
+# ========================================================================
+
+
+def global_mean_time_series(field, weight):
+    """
+    ----------------------------------------------------------------------------
+    This function calculates a time series of the global area-weighted
+    [by cos(lat)] mean of the input field
+    ----------------------------------------------------------------------------
+    :param field: input field [ntime x nlat x nlon]
+    :param weight: cos(lat) weight matrix [nlat x nlon]
+    ----------------------------------------------------------------------------
+    :return:
+    """
+    import matplotlib.pyplot as plt
+
+    mean_time_series = np.empty(shape=field.shape[0])
+    for i in range(236):
+        field1 = field[i, :, :]
+        mean_time_series[i] = np.average(field1, weights=weight)
+        print(mean_time_series[i])
+
+    # first set of axes
+    plt.plot(mean_time_series, label='Global Mean Anomalies')
+    plt.legend(fontsize=10)
+    plt.show()
+    return
 
 
 # ========================================================================
@@ -1013,7 +1054,7 @@ def multiple_regression(y_anomalies, *x_anomalies):
     """
     ----------------------------------------------------------------------------
     This function performs multiple-linear regression analysis of y_anomalies
-    (dependent variable) onto one or more x_anomaly fields (independent variables)
+    (the dependent variable) on one or more x_anomalies (independent variables)
     at each grid box. It returns regression coefficient (beta_i) maps for each
     variable x_i. The beta_i represent the partial derivative (dy/dx_i) response
     of y to independent changes in x_i, with all of the other x_i held fixed.
