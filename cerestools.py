@@ -25,9 +25,9 @@
 # Last Updated: March 18, 2020
 #
 # ==============================================================================
-# FOOTPRINT-LEVEL
-#  ----------------
-# get date                    <- get the year, month, day, hour from input file
+# FOOTPRINT-LEVEL SWATH
+# ---------------------
+# get date_dev                <- get the year, month, day, hour from input file
 # get platform                <- get the satellite and instrument name
 # read_ssf_geolocation        <- get footprint lat, lon, etc. from SSF file
 # read_crs_geolocation        <- get footprint lat, lon, etc. from CRS file
@@ -38,9 +38,9 @@
 # set_colormap                <- set colormap from palettable library
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram & scatter plot of swath diff
-# -------------------
-# TISA GRIDDED FIELDS
-# -------------------
+# ---------------------
+#  TISA GRIDDED FIELDS
+# ---------------------
 # print_nc_file_info          <- print info about variables in netCDF file
 # read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
 # read_ebaf_var               <- read field variable from EBAF file
@@ -49,7 +49,7 @@
 # compute_annual_climatology  <- compute long-term mean and std dev (sigma)
 # compute_regional_averages   <- compute area-weighted mean for various regions
 # composite_difference        <- compute composite mean difference
-# global_mean_time_series     <- compute area-weighted mean time series
+# global_mean_time_series     <- compute global area-weighted mean time series
 # simple_regression           <- regress field on another field
 # multiple_regression         <- regress field on multiple other fields
 # global_map                  <- plot map of gridded field
@@ -58,19 +58,18 @@
 # -------------------
 # Under development :
 # -------------------
-# area_weighted_mean_time_series     <- calculate mean over region and plot time series
 # compute_linear_trend               <- fit linear trend
 # ==============================================================================
 
 
-def get_date(file):
+def get_date_dev(file):
     """
     ----------------------------------------------------------------------------
     This function reads input file yyyymmddhh information and transforms
     the date string into a readable form for plotting. It also outputs date
     information for ingestion by the cartopy NightShade function
     ----------------------------------------------------------------------------
-    :param file: input file
+    :param file: e.g., CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010100
     ----------------------------------------------------------------------------
     :return: (1) date for Nightshade
              (2) date_str for plotting [string]
@@ -98,10 +97,10 @@ def get_date(file):
 def get_platform(file):
     """
     ----------------------------------------------------------------------------
-    This function retrieves the satellite and flight model info from the
-    input file
+    This function retrieves the satellite and flight model info from officially
+    released CERES SSF or CRS files.
     ----------------------------------------------------------------------------
-    :param file: input file name
+    :param file: e.g., CER_CRS_Terra-FM1-MODIS_Edition2G_023034.2010062023
     ----------------------------------------------------------------------------
     :return: (1) platform = satellite and flight model [string]
     """
@@ -247,7 +246,7 @@ def read_ssf_var(file_path, vararg, fill):
     """
     ----------------------------------------------------------------------------
     This function reads variables from CERES Level 2 Single Scanner Footprint
-    official-release data file
+    officially released data
     ----------------------------------------------------------------------------
     :param file_path: path to file
     :param vararg:    variable argument
@@ -690,11 +689,14 @@ def print_nc_file_info(filepath):
 def read_ebaf_geolocation(filepath):
     """
     ----------------------------------------------------------------------------
-
+    This function reads geolocation information from CERES EBAF files
     ----------------------------------------------------------------------------
-    :param filepath:
+    :param filepath: path to EBAF file
     ----------------------------------------------------------------------------
-    :return:
+    :return: (1) latitude  - array [nlat]
+             (2) longitude - array [nlon]
+             (3) lat - matrix [nlat x nlon]
+             (4) lon - matrix [nlat x nlon]
     """
 
     import numpy as np
@@ -705,6 +707,9 @@ def read_ebaf_geolocation(filepath):
     latitude = nc.variables['lat'][:]
     longitude = nc.variables['lon'][:]
 
+    time = nc.variables['time'].units
+    starting_month = str(time[16:18])
+
     # lat, lon grid
     lon, lat = np.meshgrid(longitude, latitude)
 
@@ -714,6 +719,39 @@ def read_ebaf_geolocation(filepath):
     print(lon.shape, '\n')
 
     return latitude, longitude, lat, lon
+
+
+# ========================================================================
+
+
+def read_ebaf_start_month_year(filepath):
+    """
+    ----------------------------------------------------------------------------
+    This function extracts the starting month and year from EBAF file
+    ----------------------------------------------------------------------------
+    :param filepath: path to EBAF file
+    ----------------------------------------------------------------------------
+    :return: (1) month
+             (2) year
+    """
+
+    import numpy as np
+    from netCDF4 import Dataset
+
+    nc = Dataset(filepath, 'r')
+
+    time = nc.variables['time'][:]
+    time_units = nc.variables['time'].units
+    start_month = str(int(time_units[16:18]))
+    start_year = str(time_units[11:15])
+
+    time_series_length = len(time)
+
+    # print(time_series_length)
+    # print(start_month)
+    # print(start_year)
+
+    return start_month, start_year
 
 
 # ========================================================================
@@ -786,7 +824,7 @@ def compute_monthly_anomalies(field, fieldname):
     while i < record_len:
         i += 12
         num_yr += 1
-        # print(i, num_yr)
+        print(i, num_yr)
 
     # repeat 20 times
     seasonal_cycle = np.tile(monthly_climatology, (num_yr, 1, 1))
@@ -799,6 +837,7 @@ def compute_monthly_anomalies(field, fieldname):
 
     r = 100
     p = 120
+    # add lat lon location info to plots...
     fig, (ax1, ax2) = plt.subplots(2, 1)
     # first set of axes
     ax1.plot(np.linspace(0, 0, record_len))
@@ -830,6 +869,7 @@ def cos_lat_weight(lat_vector):
 
     import numpy as np
     import numpy.matlib
+    import matplotlib.pyplot as plt
 
     # compute cos(lat in degrees to radians)
     weight = np.cos(np.deg2rad(lat_vector))
@@ -845,8 +885,8 @@ def cos_lat_weight(lat_vector):
     print('cos(lat) weight array shape...')
     print(weight.shape, '\n')
 
-    import matplotlib.pyplot as plt
     plt.imshow(weight)
+    plt.title("Cosine of Latitude Weight Matrix")
 
     return weight
 
@@ -957,28 +997,84 @@ def composite_difference(field, ind1, ind2):
 # ========================================================================
 
 
-def global_mean_time_series(field, weight):
+def global_mean_time_series(field, weight, field_name, field_units):
     """
     ----------------------------------------------------------------------------
-    This function calculates a time series of the global area-weighted
-    [by cos(lat)] mean of the input field
+    This function calculates the global area-weighted [by cos(lat)] mean of the
+    input field and plots the result
     ----------------------------------------------------------------------------
     :param field: input field [ntime x nlat x nlon]
     :param weight: cos(lat) weight matrix [nlat x nlon]
+    ----------------------------------------------------------------------------
+    :return: mean_time_series
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    mean_time_series = np.empty(shape=field.shape[0])
+    for i in range(field.shape[0]):
+        field1 = field[i, :, :]
+        mean_time_series[i] = np.average(field1, weights=weight)
+        print(mean_time_series[i])
+
+    record_len = field.shape[0]
+
+    # compute number of years for tick marks
+    i = 0
+    num_yr = 0
+    while i < record_len:
+        i += 12
+        num_yr += 1
+        print(i, num_yr)
+
+    # plot of time series
+    plt.figure(figsize=(10, 4))
+    plt.grid()
+    plt.plot(mean_time_series, label=field_name, marker='.')
+    plt.ylabel(field_units)
+    plt.title('Global Area-Weighted Mean' + ' ' + field_name)
+
+    # #need to determine this some other way to handle different length time series
+    # xticklabels = ('3/00', '3/01', '3/02', '3/03', '3/04', '3/05',
+    #             '3/06', '3/07', '3/08', '3/09', '3/10', '3/11',
+    #             '3/12', '3/13', '3/14', '3/15', '3/16', '3/17',
+    #             '3/18', '3/19')
+    plt.xticks(ticks=range(0, record_len, 12), labels=' ')
+    plt.legend(fontsize=10)
+    plt.show()
+    return mean_time_series
+
+
+# ========================================================================
+
+
+def plot_time_series(var, name, units, start_mo, start_yr):
+    """
+    ----------------------------------------------------------------------------
+    This function plots a time series of data
+    ----------------------------------------------------------------------------
+    :param var:
+    :param name:
+    :param units:
+    :param start_mo:
+    :param start_yr:
     ----------------------------------------------------------------------------
     :return:
     """
     import matplotlib.pyplot as plt
 
-    mean_time_series = np.empty(shape=field.shape[0])
-    for i in range(236):
-        field1 = field[i, :, :]
-        mean_time_series[i] = np.average(field1, weights=weight)
-        print(mean_time_series[i])
+    record_len = var.shape[0]
 
-    # first set of axes
-    plt.plot(mean_time_series, label='Global Mean Anomalies')
-    plt.legend(fontsize=10)
+    # plot time series
+    plt.figure(figsize=(12, 4))
+    plt.grid()
+    plt.plot(var, label=name, marker='.')
+    plt.title(name)
+    xticklabels = [str(start_mo) + '/' + str(start_yr + i) for i in range(record_len)]
+    plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=8)
+    plt.yticks(fontsize=8)
+    plt.ylabel(units)
+    plt.legend(fontsize=8)
     plt.show()
     return
 
@@ -1047,8 +1143,6 @@ def multiple_regression_2xi(x1_anomalies, x2_anomalies, y_anomalies):
 
 # ========================================================================
 
-# TO DO: add option to standardize *x_anomalies time series...
-
 
 def multiple_regression(y_anomalies, *x_anomalies):
     """
@@ -1058,11 +1152,11 @@ def multiple_regression(y_anomalies, *x_anomalies):
     at each grid box. It returns regression coefficient (beta_i) maps for each
     variable x_i. The beta_i represent the partial derivative (dy/dx_i) response
     of y to independent changes in x_i, with all of the other x_i held fixed.
-    The star before the x_anomalies parameter means that any number of predictors
-    can be input to the function
+    The star before x_anomalies means that any number of predictors may be input
+    to the function.
     ----------------------------------------------------------------------------
-    :param y_anomalies:   dependent variable anomaly field [nlat x nlon]
-    :param x_anomalies: independent variable anomaly field [* x nlat x nlon]
+    :param y_anomalies:  dependent variable anomaly field [nlat x nlon]
+    :param x_anomalies: independent variable anomaly field [*arg x nlat x nlon]
     ----------------------------------------------------------------------------
     :return: coefficient matrix [number of x fields input + 1 x nlat x nlon]
     """
@@ -1089,13 +1183,16 @@ def multiple_regression(y_anomalies, *x_anomalies):
             # add row for each predictor variable
             for k, x_anom in enumerate(x_anomalies):
                 x[k, :] = x_anom[:, i, j]
+                # if standardized == True:
+                #    need to add option
 
             y = y_anomalies[:, i, j]
             a = np.vstack([x, np.ones(len(x[0, :]))]).T
 
+            # print the input anomalies at the first grid box
             if i == 1 and j == 1:
                 print(a)
-                print(a.shape[0])
+                print('X matrix shape:', a.shape[0])
 
             # compute coefficients
             coefficients[:, i, j] = np.linalg.lstsq(a, y, rcond=None)[0]
@@ -1112,7 +1209,7 @@ def global_map(lon, lat, field,
                cmap, cmap_lims, ti_str):
     """
     ----------------------------------------------------------------------------
-    This function plots a map of data
+    This function plots a map of gridded data
     ----------------------------------------------------------------------------
     :param lon: longitude matrix
     :param lat: latitude matrix
@@ -1145,17 +1242,17 @@ def global_map(lon, lat, field,
 
     # Plot figure
     axgr = AxesGrid(fig, 111, axes_class=axes_class,
-                nrows_ncols=(nrows, ncols),
-                axes_pad=(0.4,0.4),
-                share_all = True,
-                cbar_location='right',
-                cbar_mode='each',
-                cbar_pad=0.1,
-                cbar_size='5%',
-                label_mode=1)
+                    nrows_ncols=(nrows, ncols),
+                    axes_pad=(0.4,0.4),
+                    share_all = True,
+                    cbar_location='right',
+                    cbar_mode='each',
+                    cbar_pad=0.1,
+                    cbar_size='5%',
+                    label_mode=1)
 
     for i, ax in enumerate(axgr):
-        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',edgecolor='grey')
+        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none', edgecolor='grey')
         # ax.add_feature(cartopy.feature.GSHHSFeature('low',edgecolor='none'), zorder=1, facecolor='black')
         ax.gridlines(color='black', linestyle=':')
         ax.set_title(ti_str)
@@ -1164,10 +1261,10 @@ def global_map(lon, lat, field,
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
 
     # Use a different colorbar range every time by specifying tuple of tuples
-    limits=cmap_lims
+    limits = cmap_lims
     for i in range(1):
-        im = axgr[i].pcolor(lon, lat, field,transform=ccrs.PlateCarree(),cmap=cmap,
-                              vmin=limits[0], vmax=limits[1])
+        im = axgr[i].pcolor(lon, lat, field, transform=ccrs.PlateCarree(), cmap=cmap,
+                            vmin=limits[0], vmax=limits[1])
         axgr.cbar_axes[i].colorbar(im)
 
     for i, cax in enumerate(axgr.cbar_axes):
@@ -1175,4 +1272,7 @@ def global_map(lon, lat, field,
 
     plt.show()
     return
+
+
+# ========================================================================
 

@@ -29,9 +29,12 @@ cmap = ceres.set_colormap(Balance_19, 0)
 # read latitude and longitude information from file
 latitude, longitude, lat, lon = ceres.read_ebaf_geolocation(filepath=file_path)
 
+start_mo, start_yr = ceres.read_ebaf_start_month_year(filepath=file_path)
+
 # read variable including its name and units
 # field, name, units = ceres.read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
 lwf, lwf_name, lwf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_lw_all_mon')
+swf, swf_name, swf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_sw_all_mon')
 tcf, tcf_name, tcf_units = ceres.read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
 cep, cep_name, cep_units = ceres.read_ebaf_var(filepath=file_path, variable='cldpress_total_daynight_mon')
 cet, cet_name, cet_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtemp_total_daynight_mon')
@@ -55,9 +58,9 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 #                  varname=tcf_name, varunits=tcf_units, nrows=1, ncols=1, cen_lon=180,
 #                  cmap=cmap, cmap_lims=(0, 100), ti_str='CERES-EBAF Ed4.1')
 #
-ceres.global_map(lon=lon, lat=lat, field=mean_tau,
-                 varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
-                 cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
+# ceres.global_map(lon=lon, lat=lat, field=mean_tau,
+#                  varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
+#                  cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
 
 
 # compute weights for area averaging
@@ -67,8 +70,8 @@ weights = ceres.cos_lat_weight(latitude)
 
 
 # compute anomalies by removing long-term monthly means
-lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
-# tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
+# lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
+tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
 # cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
 # cet_anomalies, cet_seasonal_cycle = ceres.compute_monthly_anomalies(cet, cet_name)
 # tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_name)
@@ -93,34 +96,7 @@ lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_nam
 #                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CEP')
 
 
-print(lwf_anomalies.shape)
+global_mean_lwf = ceres.global_mean_time_series(field=lwf, weight=weights, field_name=lwf_name, field_units=r'W m$^{-2}$')
 
+ceres.plot_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
 
-
-def global_mean_time_series(field, weight):
-    """
-    ----------------------------------------------------------------------------
-    This function calculates a time series of the global area-weighted
-    [by cos(lat)] mean of the input field
-    ----------------------------------------------------------------------------
-    :param field: input field [ntime x nlat x nlon]
-    :param weight: cos(lat) weight matrix [nlat x nlon]
-    ----------------------------------------------------------------------------
-    :return:
-    """
-    import matplotlib.pyplot as plt
-
-    mean_time_series = np.empty(shape=field.shape[0])
-    for i in range(236):
-        field1 = field[i, :, :]
-        mean_time_series[i] = np.average(field1, weights=weight)
-        print(mean_time_series[i])
-
-    # first set of axes
-    plt.plot(mean_time_series, label='Global Mean Anomalies')
-    plt.legend(fontsize=10)
-    plt.show()
-    return
-
-
-global_mean_time_series(field=lwf, weight=weights)
