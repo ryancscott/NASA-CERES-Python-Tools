@@ -33,7 +33,7 @@ cmap = ceres.set_colormap(Balance_19, 0)
 # read latitude and longitude information from file
 # -------------------------------------------------------
 
-latitude, longitude, lat, lon = ceres.read_ebaf_geolocation(filepath=file_path)
+latitude, longitude, lat, lon, time = ceres.read_ebaf_geolocation(file_path=file_path)
 
 start_mo, start_yr = ceres.read_ebaf_start_month_year(filepath=file_path)
 
