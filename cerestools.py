@@ -1,12 +1,10 @@
 # ==============================================================================
 #
-#                   -----***** NASA CERES PYTHON TOOLS *****-----
+#                   ----***** NASA CERES PYTHON TOOLS *****-----
 #
 # ==============================================================================
 #
 # Module: cerestools.py
-#
-# Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
 # Purpose:  This library contains Python 3 functions to read, manipulate, and
 #           analyze data from the National Aeronautics and Space Administration
@@ -17,10 +15,13 @@
 #           development purposes (*_dev) as well as the analysis of official
 #           release data products. See function descriptions below for more info.
 #
-# Usage: import cerestools as ceres
+# To use: import cerestools as ceres
 #
 # Dependencies: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
-# I recommend installing the above libraries using pip, conda, or an IDE
+#               I recommend installing the above libraries using conda, pip, or
+#               an IDE (e.g., PyCharm).
+#
+# Author: Ryan C. Scott, ryan.c.scott@nasa.gov
 #
 # Last Updated: March 18, 2020
 #
@@ -53,7 +54,7 @@
 # simple_regression           <- regress field on another field
 # multiple_regression         <- regress field on multiple other fields
 # global_map                  <- plot map of gridded field
-#
+# plot_time_series            <- plot time series of field
 #
 # -------------------
 # Under development :
@@ -62,19 +63,19 @@
 # ==============================================================================
 
 
-def get_date_dev(file):
+def get_date(file):
     """
     ----------------------------------------------------------------------------
     This function reads input file yyyymmddhh information and transforms
     the date string into a readable form for plotting. It also outputs date
-    information for ingestion by the cartopy NightShade function
+    information for ingestion by the cartopy NightShade function. Works with
+    official and development data files that end with date info. See line below.
     ----------------------------------------------------------------------------
     :param file: e.g., CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010100
     ----------------------------------------------------------------------------
     :return: (1) date for Nightshade
              (2) date_str for plotting [string]
     """
-
     import datetime
 
     time_str = file[-10:]
@@ -110,8 +111,10 @@ def get_platform(file):
         satellite = "Terra"
     elif terra_aqua == "A":
         satellite = "Aqua"
+    else:
+        satellite = "ERROR"
 
-    # get flight model (FM) info
+    # Get flight model (FM) info
     if satellite == "Terra":
         flight_model = file[14:17]
     elif satellite == "Aqua":
@@ -177,7 +180,6 @@ def read_crs_geolocation(file_path):
              (3) sza = FOV SZA at surface        [float]
              (4) obs_time = FOV observation time [float]
     """
-
     from pyhdf import SD
     hdf = SD.SD(file_path)
     # print(hdf.datasets())
@@ -203,7 +205,7 @@ def read_crs_geolocation(file_path):
 
 # ==============================================================================
 
-
+# this function will be obsolete once I rename variables in crs2hdf.f90
 def read_crs_geolocation_dev(file_path):
     """
     ----------------------------------------------------------------------------
@@ -223,11 +225,11 @@ def read_crs_geolocation_dev(file_path):
     hdf = SD.SD(file_path)
     # print(hdf.datasets())
 
-    colatitude = hdf.select('COLAT_SFC')
+    colatitude = hdf.select('Colatitude')
     colat = colatitude.get()
     fov_lat = 90 - colat
 
-    longitude = hdf.select('LONG_SFC')
+    longitude = hdf.select('Longitude')
     fov_lon = longitude.get()
 
     pressure_levels = hdf.select('Pressure')
@@ -276,10 +278,9 @@ def read_ssf_var(file_path, vararg, fill):
     data = hdf.select(var_name)
     variable = data.get()
     var_units = data.units
-    var_fill = data._FillValue
 
     if fill == 1:
-        variable[variable == var_fill] = np.nan
+        variable[variable == data._FillValue] = np.nan
 
     # get field at appropriate vertical level
     var_field = variable
@@ -350,7 +351,7 @@ def read_crs_var(file_path, vararg, levarg, fill):
 
 # ==============================================================================
 
-
+# This function will become obsolete once I rename variables in crs2hdf.f90
 def read_crs_var_dev(file_path, vararg, levarg, fill):
     """
     ----------------------------------------------------------------------------
@@ -415,10 +416,9 @@ def read_crs_var_dev(file_path, vararg, levarg, fill):
     data = hdf.select(var_name)
     variable = data.get()
     var_units = data.units
-    var_fill = data._FillValue
 
     if fill == 1:
-        variable[variable == var_fill] = np.nan
+        variable[variable == data._FillValue] = np.nan
 
     # get field at appropriate vertical level
     if levarg < 0:
@@ -442,7 +442,6 @@ def set_colormap(cmap_name, typarg):
     ----------------------------------------------------------------------------
     :return: colormap
     """
-
 
     switch = {
         0: "continuous",
@@ -492,7 +491,6 @@ def plot_swath(lon, lat, field,
     ----------------------------------------------------------------------------
     :return: plot of the data
     """
-
     import numpy as np
     import matplotlib.pyplot as plt
     import cartopy.crs as ccrs
@@ -575,8 +573,8 @@ def swath_difference(field2, field1, day_only, sza):
     diff[diff == min(diff)] = np.nan
 
     # need to num FOVs from file...
-    if day_only == 1:
-        for i in range(99347):
+    if day_only is True:
+        for i in range(field2.shape[0]):
             if sza[i] > 90:
                 diff[i] = np.nan
 
@@ -885,8 +883,8 @@ def cos_lat_weight(lat_vector):
     print('cos(lat) weight array shape...')
     print(weight.shape, '\n')
 
-    plt.imshow(weight)
-    plt.title("Cosine of Latitude Weight Matrix")
+    # plt.imshow(weight)
+    # plt.title("Cosine of Latitude Weight Matrix")
 
     return weight
 
@@ -900,7 +898,7 @@ def compute_annual_climatology(field):
     This function calculates the long-term mean and standard deviation of the
     input field
     ----------------------------------------------------------------------------
-    :param field: variable under consideration
+    :param field: variable under consideration [ntime x nlat x nlon]
     ----------------------------------------------------------------------------
     :return: long-term mean and standard deviation
     """
@@ -997,14 +995,14 @@ def composite_difference(field, ind1, ind2):
 # ========================================================================
 
 
-def global_mean_time_series(field, weight, field_name, field_units):
+def global_mean_time_series(field, weight):
     """
     ----------------------------------------------------------------------------
-    This function calculates the global area-weighted [by cos(lat)] mean of the
-    input field and plots the result
+    This function calculates the global area-cos(lat)-weighted mean of the
+    input field
     ----------------------------------------------------------------------------
-    :param field: input field [ntime x nlat x nlon]
-    :param weight: cos(lat) weight matrix [nlat x nlon]
+    :param field: input field                [ntime x nlat x nlon]
+    :param weight: cos(lat) weight matrix    [nlat x nlon]
     ----------------------------------------------------------------------------
     :return: mean_time_series
     """
@@ -1015,33 +1013,8 @@ def global_mean_time_series(field, weight, field_name, field_units):
     for i in range(field.shape[0]):
         field1 = field[i, :, :]
         mean_time_series[i] = np.average(field1, weights=weight)
-        print(mean_time_series[i])
+        #print(mean_time_series[i])
 
-    record_len = field.shape[0]
-
-    # compute number of years for tick marks
-    i = 0
-    num_yr = 0
-    while i < record_len:
-        i += 12
-        num_yr += 1
-        print(i, num_yr)
-
-    # plot of time series
-    plt.figure(figsize=(10, 4))
-    plt.grid()
-    plt.plot(mean_time_series, label=field_name, marker='.')
-    plt.ylabel(field_units)
-    plt.title('Global Area-Weighted Mean' + ' ' + field_name)
-
-    # #need to determine this some other way to handle different length time series
-    # xticklabels = ('3/00', '3/01', '3/02', '3/03', '3/04', '3/05',
-    #             '3/06', '3/07', '3/08', '3/09', '3/10', '3/11',
-    #             '3/12', '3/13', '3/14', '3/15', '3/16', '3/17',
-    #             '3/18', '3/19')
-    plt.xticks(ticks=range(0, record_len, 12), labels=' ')
-    plt.legend(fontsize=10)
-    plt.show()
     return mean_time_series
 
 
@@ -1051,15 +1024,16 @@ def global_mean_time_series(field, weight, field_name, field_units):
 def plot_time_series(var, name, units, start_mo, start_yr):
     """
     ----------------------------------------------------------------------------
-    This function plots a time series of data
+    This function plots a time series of arbitrary length, such as one
+    produced by the global_mean_time_series function above
     ----------------------------------------------------------------------------
-    :param var:
-    :param name:
-    :param units:
-    :param start_mo:
-    :param start_yr:
+    :param var: time series to plot             [float; ntime]
+    :param name: name of the variable           [string]
+    :param units: units of the variable         [string]
+    :param start_mo: 1st month of time series   [int]
+    :param start_yr: 1st year of time series    [int]
     ----------------------------------------------------------------------------
-    :return:
+    :return: plot the data
     """
     import matplotlib.pyplot as plt
 
@@ -1070,27 +1044,28 @@ def plot_time_series(var, name, units, start_mo, start_yr):
     plt.grid()
     plt.plot(var, label=name, marker='.')
     plt.title(name)
-    xticklabels = [str(start_mo) + '/' + str(start_yr + i) for i in range(record_len)]
-    plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=8)
+    xticklabels = [str(start_mo) + '/' + str((start_yr+i))[2:] for i in range(record_len)]
+    plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=10)
     plt.yticks(fontsize=8)
     plt.ylabel(units)
     plt.legend(fontsize=8)
     plt.show()
+
     return
 
 
 # ========================================================================
 
 
-def simple_regression(x_anomalies, y_anomalies):
+def simple_regression(y_anomalies, x_anomalies):
     """
     ----------------------------------------------------------------------------
-
+    This function regresses a field of y anomalies onto a field of x anomalies
     ----------------------------------------------------------------------------
-    :param x_anomalies:
-    :param y_anomalies:
+    :param x_anomalies: independent variable [ntime x nlat x nlon]
+    :param y_anomalies: dependent variable   [ntime x nlat x nlon]
     ----------------------------------------------------------------------------
-    :return:
+    :return: matrix of regression coefficients
     """
 
     import numpy as np
@@ -1111,7 +1086,7 @@ def simple_regression(x_anomalies, y_anomalies):
 # ========================================================================
 
 
-def multiple_regression_2xi(x1_anomalies, x2_anomalies, y_anomalies):
+def multiple_regression_2xi(y_anomalies, x1_anomalies, x2_anomalies):
     """
     ----------------------------------------------------------------------------
     This function performs multiple-linear regression analysis of the
@@ -1121,9 +1096,9 @@ def multiple_regression_2xi(x1_anomalies, x2_anomalies, y_anomalies):
     derivative (dy/dx_i) response of y to independent changes in x_i, with the
     other x_i held fixed.
     ----------------------------------------------------------------------------
+    :param y_anomalies:   y anomaly field (  dependent variable)
     :param x1_anomalies: x1 anomaly field (independent variable)
     :param x2_anomalies: x2 anomaly field (independent variable)
-    :param y_anomalies:   y anomaly field (  dependent variable)
     :return: matrix of coefficients
     """
 

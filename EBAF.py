@@ -1,5 +1,5 @@
 # ========================================================================
-# Developing tools to manipulate/analyze CERES gridded data
+# Developing tools to manipulate/analyze gridded CERES data
 # ========================================================================
 
 
@@ -19,20 +19,29 @@ file_path = path + file
 
 # ========================================================================
 
-
+# -------------------------------------------------------
 # print information about the nc file
+# -------------------------------------------------------
 ceres.print_nc_file_info(file_path)
 
+# -------------------------------------------------------
 # set the colormap
+# -------------------------------------------------------
 cmap = ceres.set_colormap(Balance_19, 0)
 
+# -------------------------------------------------------
 # read latitude and longitude information from file
+# -------------------------------------------------------
+
 latitude, longitude, lat, lon = ceres.read_ebaf_geolocation(filepath=file_path)
 
 start_mo, start_yr = ceres.read_ebaf_start_month_year(filepath=file_path)
 
-# read variable including its name and units
-# field, name, units = ceres.read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
+
+# -------------------------------------------------------
+# read variables including their name and units
+# -------------------------------------------------------
+
 lwf, lwf_name, lwf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_lw_all_mon')
 swf, swf_name, swf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_sw_all_mon')
 tcf, tcf_name, tcf_units = ceres.read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
@@ -40,15 +49,21 @@ cep, cep_name, cep_units = ceres.read_ebaf_var(filepath=file_path, variable='cld
 cet, cet_name, cet_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtemp_total_daynight_mon')
 tau, tau_name, tau_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtau_total_day_mon')
 
-import numpy as np
-#tau = np.log(tau)
 
+# -------------------------------------------------------
 # compute the long-term mean and standard deviation
+# -------------------------------------------------------
+
 mean_lwf, sigma_lwf = ceres.compute_annual_climatology(lwf)
 mean_tcf, sigma_tcf = ceres.compute_annual_climatology(tcf)
 mean_cep, sigma_cep = ceres.compute_annual_climatology(cep)
 mean_cet, sigma_cet = ceres.compute_annual_climatology(cet)
 mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
+
+
+# -------------------------------------------------------
+# plot map of climatology
+# -------------------------------------------------------
 
 # ceres.global_map(lon=lon, lat=lat, field=mean_lwf,
 #                  varname=lwf_name, varunits=lwf_units, nrows=1, ncols=1, cen_lon=180,
@@ -63,28 +78,42 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 #                  cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
 
 
+# -------------------------------------------------------
 # compute weights for area averaging
-weights = ceres.cos_lat_weight(latitude)
-# compute area-weighted averages of the long-term mean
-#ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
+# -------------------------------------------------------
 
+weights = ceres.cos_lat_weight(latitude)
+
+
+# -------------------------------------------------------
+# compute area-weighted averages of the long-term mean
+# -------------------------------------------------------
+
+# ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
 
 # compute anomalies by removing long-term monthly means
-# lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
+lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
 tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
 # cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
 # cet_anomalies, cet_seasonal_cycle = ceres.compute_monthly_anomalies(cet, cet_name)
 # tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_name)
 
-#lwf_tcf_coefs = ceres.simple_regression(tcf_anomalies, lwf_anomalies)
-#ceres.global_map(lon=lon, lat=lat, field=lwf_tcf_coefs,
+
+# -------------------------------------------------------
+# regress a field onto another
+# -------------------------------------------------------
+
+# lwf_tcf_coefs = ceres.simple_regression(tcf_anomalies, lwf_anomalies)
+
+# ceres.global_map(lon=lon, lat=lat, field=lwf_tcf_coefs,
 #                 varname='', varunits=r'$W$ $m^{-2}$ $\%^{-1}$', nrows=1, ncols=1, cen_lon=180,
 #                 cmap=cmap, cmap_lims=(-2, 2), ti_str='LW flux regressed on total CF')
 
 
-# print('Performing multiple linear regression of TOA LW flux on \n'
-#       'cloud fraction, effective pressure, effective temperature...')
-#
+# -------------------------------------------------------
+# regress a field onto many other fields
+# -------------------------------------------------------
+
 # coefficients = ceres.multiple_regression(lwf_anomalies, tcf_anomalies, cep_anomalies)
 #
 # ceres.global_map(lon=lon, lat=lat, field=coefficients[0,:,:],
@@ -95,8 +124,18 @@ tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_nam
 #                   varname='', varunits=r'W m$^{-2}$ hPa$^{-1}$', nrows=1, ncols=1, cen_lon=180,
 #                   cmap=cmap, cmap_lims=(-2, 2), ti_str=r'$\partial$LW/$\partial$CEP')
 
+# -------------------------------------------------------
+# compute global mean time series
+# -------------------------------------------------------
 
-global_mean_lwf = ceres.global_mean_time_series(field=lwf, weight=weights, field_name=lwf_name, field_units=r'W m$^{-2}$')
+global_mean_lwf = ceres.global_mean_time_series(field=lwf, weight=weights)
+
+global_mean_lwfa = ceres.global_mean_time_series(field=lwf_anomalies,weight=weights)
+
+# -------------------------------------------------------
+# plot time series
+# -------------------------------------------------------
 
 ceres.plot_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
 
+ceres.plot_time_series(var=global_mean_lwfa, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)

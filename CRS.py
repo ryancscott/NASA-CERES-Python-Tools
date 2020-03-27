@@ -41,7 +41,7 @@ print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
 field1, var1, units1, lev1 = ceres.read_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
-field2, var2, units2, lev2 = ceres.read_crs_var_dev(file_path=file_path2, vararg=0, levarg=1, fill=1)
+field2, var2, units2, lev2 = ceres.read_crs_var(file_path=file_path2, vararg=0, levarg=1, fill=1)
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
@@ -53,7 +53,7 @@ print('============================================')
 print('\t\t\tComputing difference...\t\t\t')
 print('============================================')
 
-difference = ceres.swath_difference(field2=field2, field1=field1, day_only=0, sza=sza)
+difference = ceres.swath_difference(field2=field2, field1=field1, day_only=False, sza=sza)
 
 print('============================================')
 print('\t\t\tSetting colormap...\t\t\t')

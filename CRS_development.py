@@ -47,7 +47,7 @@ hgts, hgts_name, hgts_units, hgts_lev = ceres.read_crs_var_dev(file_path=file_pa
 sza, sza_name, sza_units, sza_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=18, levarg=-1, fill=1)
 
 # Date information
-date, date_str = ceres.get_date_dev(file=file)
+date, date_str = ceres.get_date(file=file)
 
 
 print('============================================')
