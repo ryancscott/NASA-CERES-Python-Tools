@@ -6,13 +6,13 @@
 #
 # Module:   cerestools.py
 #
-# Purpose:  This library contains Python 3 functions to read, process, analyze
+# Purpose:  This library contains Python3 functions to read, process, analyze
 #           and plot data from the National Aeronautics and Space Administration
 #           (NASA) Clouds and the Earth's Radiant Energy System (CERES) Earth
-#           Radiation Budget (ERB) satellite mission. Included are functions to
-#           manipulate Level 2 swath data and Level 3 temporally-interpolated
-#           and spatially-averaged (TISA) gridded fields. This include data
-#           development purposes (*_dev) and the analysis of officially-released
+#           Radiation Budget (ERB) satellite mission. There are functions to
+#           manipulate Level-2 swath data and Level-3 gridded time-interpolated
+#           and spatially-averaged (TISA) fields. This library is for data
+#           development purposes (*_dev) and analysis of official-release
 #           data products. See function descriptions for additional information.
 #
 # To use:   import cerestools as ceres
@@ -111,13 +111,48 @@ def get_platform(file):
     elif terra_aqua == "A":
         satellite = "Aqua"
     else:
-        satellite = "ERROR"
+        satellite = "Error"
 
     # Get flight model (FM) info
     if satellite == "Terra":
         flight_model = file[14:17]
     elif satellite == "Aqua":
         flight_model = file[13:16]
+
+    platform = satellite + '-' + flight_model
+
+    print("CERES Instrument:", platform)
+    return platform
+
+
+# =====================================================================
+
+
+def get_platform_dev(file):
+    """
+    ----------------------------------------------------------------------------
+    This function retrieves the satellite and flight model info from CRS
+    DEVELOPMENT files...
+    ----------------------------------------------------------------------------
+    :param file: e.g., CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212
+    ----------------------------------------------------------------------------
+    :return: (1) platform = satellite and flight model [string]
+    """
+    terra_aqua = file[9]
+
+    if terra_aqua == "T":
+        satellite = "Terra"
+    elif terra_aqua == "A":
+        satellite = "Aqua"
+    else:
+        satellite = "ERROR"
+
+    # Get flight model (FM) info
+    if satellite == "Terra":
+        flight_model = file[15:18]
+        print(flight_model)
+    elif satellite == "Aqua":
+        flight_model = file[14:17]
 
     platform = satellite + '-' + flight_model
 
@@ -216,8 +251,8 @@ def read_crs_geolocation_dev(file_path):
     :return: (1) fov_lat = FOV latitude          [float]
              (2) fov_lon = FOV longitude         [float]
              (3) pres_levs = FOV pressure levels [float]
-             (3) sza = FOV SZA at surface        [float]
              (4) obs_time = FOV observation time [float]
+             (5) sza = FOV SZA at surface        [float]
     """
 
     from pyhdf import SD
@@ -237,7 +272,10 @@ def read_crs_geolocation_dev(file_path):
     time_of_obs = hdf.select("Julian Time")
     obs_time = time_of_obs.get()
 
-    return fov_lat, fov_lon, pres_levs, obs_time
+    solar_zenith = hdf.select("CERES solar zenith at surface")
+    sza = solar_zenith.get()
+
+    return fov_lat, fov_lon, pres_levs, obs_time, sza
 
 
 # ==============================================================================
@@ -311,24 +349,16 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # # select variable using integer index: vararg
-    # switch = {
-    #     0: 'Longwave flux - downward - total',
-    #     1: 'Longwave flux - upward - total',
-    #     2: 'Shortwave flux - downward - total',
-    #     3: 'Shortwave flux - upward - total'
-    # }
-    # var_name = switch.get(vararg)
-
-    # select p level using integer index: levarg
+    # Select p level using integer index: lev_arg
     switch2 = {
-        -1: ' ',
+        -1: ' ',    # not associated with a particular level per se
         0: 'TOA',
         1: '70 mb',
         2: '200 mb',
         3: '500 mb',
         4: 'surface'
     }
+    # retrieve name of the level
     lev_name = switch2.get(lev_arg)
 
     print("Getting", var_name, "at",
@@ -376,39 +406,15 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # # select variable using integer index: vararg
-    # switch = {
-    #     0: 'UT_CLR_SW_DN',
-    #     1: 'UT_CLR_SW_UP',
-    #     2: 'UT_CLR_LW_DN',
-    #     3: 'UT_CLR_LW_UP',
-    #
-    #     4: 'UT_TOT_SW_DN',
-    #     5: 'UT_TOT_SW_UP',
-    #     6: 'UT_TOT_LW_DN',
-    #     7: 'UT_TOT_LW_UP',
-    #
-    #     8: 'UT_PRS_SW_DN',
-    #     9: 'UT_PRS_SW_UP',
-    #     10: 'UT_PRS_LW_DN',
-    #     11: 'UT_PRS_LW_UP',
-    #
-    #     12: 'UT_TNA_SW_DN',
-    #     13: 'UT_TNA_SW_UP',
-    #     14: 'UT_TNA_LW_DN',
-    #     15: 'UT_TNA_LW_UP',
-    #
-    #     16: 'MATCH_AOT',
-    #     17: 'SFC_HGT',
-    #     18: 'SZEN_TOA'
-    # }
-    # var_name = switch.get(vararg)
-
-    # select level
+    # Select p level using integer index: lev_arg
     switch2 = {
         -1: ' ',
         0: 'TOA',
-        1: 'surface'
+        1: '70',
+        2: '200',
+        3: '500',
+        4: '850',
+        5: 'surface'
     }
     lev_name = switch2.get(lev_arg)
 
@@ -435,7 +441,7 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
 # ==============================================================================
 
 
-def set_colormap(colormap_name, typ_arg):
+def set_colormap(cmap_name, typ_arg):
     """
     ----------------------------------------------------------------------------
     Selects colormap from palettable library
@@ -453,10 +459,10 @@ def set_colormap(colormap_name, typ_arg):
     print("\nUsing a", switch.get(typ_arg, "N/A"), "colormap...")
 
     if typ_arg == 0:
-        color_map = colormap_name.mpl_colormap
+        color_map = cmap_name.mpl_colormap
     elif typ_arg == 1:
         from matplotlib.colors import ListedColormap
-        color_map = ListedColormap(colormap_name.mpl_colors)
+        color_map = ListedColormap(cmap_name.mpl_colors)
     elif typ_arg != 1 or typ_arg != 0:
         print('Please input 0 for continuous or 1 for discrete ...')
 
@@ -527,7 +533,7 @@ def plot_swath(lon, lat, field,
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
         ax.set_extent([-180, 180, -90, 90], projection)
-        ax.text(0.5, -0.1, varname + '  -  ' + levname + '  -  ' + varunits,
+        ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
                 transform=ax.transAxes, fontsize=10)
@@ -535,7 +541,7 @@ def plot_swath(lon, lat, field,
         if nightshade == 1:
             ax.add_feature(Nightshade(date, alpha=0.15))
 
-    # To use a different colorbar range every time, can use a tuple of tuples
+    # To use a different colorbar range each time, use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
         im = axgr[i].scatter(lon, lat, c=field, s=1,
@@ -573,19 +579,19 @@ def swath_difference(field2, field1, day_only, sza):
 
     import numpy as np
 
-    diff = field2 - field1
+    difference = field2 - field1
 
     # a footprint might be good in one but bad in another...
-    diff[diff == max(diff)] = np.nan
-    diff[diff == min(diff)] = np.nan
+    difference[difference == max(difference)] = np.nan
+    difference[difference == min(difference)] = np.nan
 
     # field2.shape[0] = field1.shape[0]
     if day_only is True:
         for i in range(field2.shape[0]):
             if sza[i] > 90:
-                diff[i] = np.nan
+                difference[i] = np.nan
 
-    return diff
+    return difference
 
 
 # ==============================================================================
@@ -618,10 +624,10 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     sigma_diff = np.nanstd(swath_diff)
 
     # number of FOVs compared
-    print("Total number of FOVs in swath: ", len(swath_diff))
-    print("Total number of FOVs where at least one is NaN: ", np.sum(np.isnan(swath_diff)))
+    print("Number of FOVs in swath: ", len(swath_diff))
+    print("Number of FOVs where at least one is NaN: ", np.sum(np.isnan(swath_diff)))
     N = len(swath_diff) - np.sum(np.isnan(swath_diff))
-    print("Total number of FOVs compared: ", N)
+    print("Number of FOVs compared: ", N)
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
     fig.suptitle('CERES ' + platform + ' - Cloud Radiative Swath (CRS)' + ' - ' + time_info, fontsize=11)
@@ -641,6 +647,11 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     props = dict(facecolor='white', alpha=0.85)
     axs[0].text(0.05, 0.95, textstr, transform=axs[0].transAxes, fontsize=8,
                 verticalalignment='top', bbox=props)
+
+    if day_only is True:
+        day_only_str = "Daytime only"
+        axs[0].text(0.05, 0.835, day_only_str, transform=axs[0].transAxes, fontsize=8,
+                    verticalalignment='top', bbox=props)
 
     if np.nanmax(field1) < np.nanmax(field2):
         max = np.nanmax(field2) + 100
@@ -764,20 +775,20 @@ def read_ebaf_start_month_year(filepath):
 # ========================================================================
 
 
-def read_ebaf_var(filepath, variable):
+def read_ebaf_var(file_path, variable):
     """
     ----------------------------------------------------------------------------
-    Extract variable data from EBAF file
+    Extract the data for a particular variable from an EBAF netCDF file
     ----------------------------------------------------------------------------
-    :param filepath: input EBAF file
-    :param var: variable to extract from file
+    :param file_path: full path to EBAF file
+    :param variable: variable to read from file
     ----------------------------------------------------------------------------
-    :return: array of variable var
+    :return: variable array
     """
 
     from netCDF4 import Dataset
 
-    nc = Dataset(filepath, 'r')
+    nc = Dataset(file_path, 'r')
 
     var = nc.variables[variable]
     var_units = var.units
@@ -799,9 +810,10 @@ def compute_monthly_anomalies(field, field_name):
     (2) Subtract the appropriate long-term means from the corresponding monthly fields to get monthly anomalies
     ----------------------------------------------------------------------------
     :param field: variable for which to compute the climatology/anomaly [lat,lon,time]
+    :param field_name: name of variable
     ----------------------------------------------------------------------------
-    :return: (1) time series of monthly anomalies at each grid box
-             (2) monthly mean seasonal cycle at each grid box
+    :return: (1) monthly_anomalies : monthly anomaly time series at each grid box
+             (2) seasonal_cycle    : monthly mean seasonal cycle at each grid box
     """
     import numpy as np
     import matplotlib.pyplot as plt
@@ -873,11 +885,11 @@ def cos_lat_weight(lat_vector):
     """
     ----------------------------------------------------------------------------
     This function takes a latitude array and computes a matrix of cos(lat)
-    weights for performing area-weighted average values of a field.
+    weights in order to perform area-weighted averaging of a field.
     ----------------------------------------------------------------------------
     :param lat_vector: vector of latitudes
     ----------------------------------------------------------------------------
-    :return: matrix of cos(lat) weights
+    :return: (1) weight: matrix of cos(lat) weights
     """
 
     import numpy as np
@@ -986,7 +998,7 @@ def composite_difference(field, ind1, ind2):
     """
     ----------------------------------------------------------------------------
     This function calculates the composite mean of 'field' for two different
-    time period and then takes their difference to illustrate the field change.
+    time periods and then takes the difference to illustrate the field change.
     ----------------------------------------------------------------------------
     :param field: field to average                [float; ntime x nlat x nlon]
     :param ind1: indices for first time period    [integer range]

@@ -40,8 +40,15 @@ print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1, lev1 = ceres.read_crs_var(file_path=file_path1, vararg=0, levarg=4, fill=1)
-field2, var2, units2, lev2 = ceres.read_crs_var(file_path=file_path2, vararg=0, levarg=1, fill=1)
+
+field1, var1, units1, lev1 = ceres.read_crs_var(file_path=file_path1,
+                                                var_name='Shortwave flux - downward - total',
+                                                lev_arg=4, fill=True)
+
+field2, var2, units2, lev2 = ceres.read_crs_var_dev(file_path=file_path2,
+                                                    var_name='UT_TOT_SW_DN',
+                                                    lev_arg=1, fill=1)
+
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
@@ -53,30 +60,31 @@ print('============================================')
 print('\t\t\tComputing difference...\t\t\t')
 print('============================================')
 
-difference = ceres.swath_difference(field2=field2, field1=field1, day_only=False, sza=sza)
+difference = ceres.swath_difference(field2=field2, field1=field1, day_only=True, sza=sza)
 
 print('============================================')
 print('\t\t\tSetting colormap...\t\t\t')
 print('============================================')
 
-colormap = ceres.set_colormap(cmap_name=Balance_20, typarg=0)
+colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
 
 print('============================================')
 print('\t\t\tPlotting data...\t\t\t')
 print('============================================')
 
 title_str = 'CERES ' + ceres.get_platform(file1) + ' CRS Ed2G'
+cen_lon = 180
 
-ceres.plot_swath(lon=lon, lat=lat, field=field1, nrows=1, ncols=1, cen_lon=0,
+ceres.plot_swath(lon=lon, lat=lat, field=field1, nrows=1, ncols=1, cen_lon=cen_lon,
            varname=var1, levname=lev1, varunits=units1,
-           cmap=colormap, cmap_lims=(0, 500), date=date, date_str=date_str,
+           cmap=colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
            nightshade=1, title_str=title_str)
 
 title_str = 'CERES ' + ceres.get_platform(file1) + ' CRS Ed4'
 
-ceres.plot_swath(lon=lon, lat=lat, field=field2, nrows=1, ncols=1, cen_lon=0,
+ceres.plot_swath(lon=lon, lat=lat, field=field2, nrows=1, ncols=1, cen_lon=cen_lon,
            varname=var1, levname=lev1, varunits=units1,
-           cmap=colormap, cmap_lims=(0, 500), date=date, date_str=date_str,
+           cmap=colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
            nightshade=1, title_str=title_str)
 
 
@@ -89,9 +97,11 @@ ceres.plot_swath(lon=lon, lat=lat, field=field2, nrows=1, ncols=1, cen_lon=0,
 title_str = 'CERES ' + ceres.get_platform(file1) + r' CRS Ed4 - Ed2G difference ($\Delta$)'
 
 
-ceres.plot_swath(lon=lon, lat=lat, field=difference, nrows=1, ncols=1, cen_lon=0,
+ceres.plot_swath(lon=lon, lat=lat, field=difference, nrows=1, ncols=1, cen_lon=cen_lon,
            varname=var1, levname=lev1, varunits=units1,
            cmap=colormap, cmap_lims=(-100, 100), date=date, date_str=date_str,
            nightshade=1, title_str=title_str)
 
-ceres.swath_histogram_scatterplot(field1, field2, var1, lev1, date_str, ceres.get_platform(file1), day_only=0, sza=sza)
+ceres.swath_histogram_scatterplot(field1, field2, var1, lev1, date_str,
+                                  ceres.get_platform(file1), day_only=True, sza=sza)
+
