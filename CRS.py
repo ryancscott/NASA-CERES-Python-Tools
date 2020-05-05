@@ -42,12 +42,12 @@ print('============================================')
 
 
 field1, var1, units1, lev1 = ceres.read_crs_var(file_path=file_path1,
-                                                var_name='Shortwave flux - downward - total',
-                                                lev_arg=4, fill=True)
+                                                var_name='CERES LW TOA flux - upwards',
+                                                lev_arg=-1, fill=True)
 
 field2, var2, units2, lev2 = ceres.read_crs_var_dev(file_path=file_path2,
-                                                    var_name='UT_TOT_SW_DN',
-                                                    lev_arg=1, fill=1)
+                                                    var_name='UT_TOT_LW_UP',
+                                                    lev_arg=0, fill=True)
 
 
 print('============================================')
@@ -60,7 +60,7 @@ print('============================================')
 print('\t\t\tComputing difference...\t\t\t')
 print('============================================')
 
-difference = ceres.swath_difference(field2=field2, field1=field1, day_only=True, sza=sza)
+difference = ceres.swath_difference(field2=field2, field1=field1, day_only=False, sza=sza)
 
 print('============================================')
 print('\t\t\tSetting colormap...\t\t\t')
@@ -72,20 +72,20 @@ print('============================================')
 print('\t\t\tPlotting data...\t\t\t')
 print('============================================')
 
-title_str = 'CERES ' + ceres.get_platform(file1) + ' CRS Ed2G'
+title_str = 'CERES ' + ceres.get_platform(file1)# + ' CRS Ed2G'
 cen_lon = 180
 
 ceres.plot_swath(lon=lon, lat=lat, field=field1, nrows=1, ncols=1, cen_lon=cen_lon,
            varname=var1, levname=lev1, varunits=units1,
-           cmap=colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-           nightshade=1, title_str=title_str)
+           cmap=colormap, cmap_lims=(0, 400), date=date, date_str=date_str,
+           nightshade=True, title_str=title_str)
 
-title_str = 'CERES ' + ceres.get_platform(file1) + ' CRS Ed4'
+title_str = 'CERES ' + ceres.get_platform(file1) #+ ' CRS Ed4'
 
 ceres.plot_swath(lon=lon, lat=lat, field=field2, nrows=1, ncols=1, cen_lon=cen_lon,
-           varname=var1, levname=lev1, varunits=units1,
-           cmap=colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-           nightshade=1, title_str=title_str)
+           varname=r"Computed TOA LW$\uparrow$ flux", levname='', varunits='Watts per square meter',
+           cmap=colormap, cmap_lims=(0, 400), date=date, date_str=date_str,
+           nightshade=True, title_str=title_str)
 
 
 # print("Plotting ", var1, "difference")
@@ -94,7 +94,7 @@ ceres.plot_swath(lon=lon, lat=lat, field=field2, nrows=1, ncols=1, cen_lon=cen_l
 # cmap_lim = (float(a), float(b))
 
 
-title_str = 'CERES ' + ceres.get_platform(file1) + r' CRS Ed4 - Ed2G difference ($\Delta$)'
+title_str = 'CERES ' + ceres.get_platform(file1) + r' calculated minus observed flux ($\Delta$)'
 
 
 ceres.plot_swath(lon=lon, lat=lat, field=difference, nrows=1, ncols=1, cen_lon=cen_lon,
@@ -103,5 +103,5 @@ ceres.plot_swath(lon=lon, lat=lat, field=difference, nrows=1, ncols=1, cen_lon=c
            nightshade=1, title_str=title_str)
 
 ceres.swath_histogram_scatterplot(field1, field2, var1, lev1, date_str,
-                                  ceres.get_platform(file1), day_only=True, sza=sza)
+                                  ceres.get_platform(file1), day_only=False, sza=sza)
 

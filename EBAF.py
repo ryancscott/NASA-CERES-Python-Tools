@@ -35,19 +35,19 @@ cmap = ceres.set_colormap(Balance_19, 0)
 
 latitude, longitude, lat, lon, time = ceres.read_ebaf_geolocation(file_path=file_path)
 
-start_mo, start_yr = ceres.read_ebaf_start_month_year(filepath=file_path)
+start_mo, start_yr = ceres.read_ebaf_start_month_year(file_path=file_path)
 
 
 # -------------------------------------------------------
 # read variables including their name and units
 # -------------------------------------------------------
 
-lwf, lwf_name, lwf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_lw_all_mon')
-swf, swf_name, swf_units = ceres.read_ebaf_var(filepath=file_path, variable='toa_sw_all_mon')
-tcf, tcf_name, tcf_units = ceres.read_ebaf_var(filepath=file_path, variable='cldarea_total_daynight_mon')
-cep, cep_name, cep_units = ceres.read_ebaf_var(filepath=file_path, variable='cldpress_total_daynight_mon')
-cet, cet_name, cet_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtemp_total_daynight_mon')
-tau, tau_name, tau_units = ceres.read_ebaf_var(filepath=file_path, variable='cldtau_total_day_mon')
+lwf, lwf_name, lwf_units = ceres.read_ebaf_var(file_path=file_path, variable='toa_lw_all_mon')
+swf, swf_name, swf_units = ceres.read_ebaf_var(file_path=file_path, variable='toa_sw_all_mon')
+tcf, tcf_name, tcf_units = ceres.read_ebaf_var(file_path=file_path, variable='cldarea_total_daynight_mon')
+cep, cep_name, cep_units = ceres.read_ebaf_var(file_path=file_path, variable='cldpress_total_daynight_mon')
+cet, cet_name, cet_units = ceres.read_ebaf_var(file_path=file_path, variable='cldtemp_total_daynight_mon')
+tau, tau_name, tau_units = ceres.read_ebaf_var(file_path=file_path, variable='cldtau_total_day_mon')
 
 
 # -------------------------------------------------------
@@ -73,9 +73,9 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 #                  varname=tcf_name, varunits=tcf_units, nrows=1, ncols=1, cen_lon=180,
 #                  cmap=cmap, cmap_lims=(0, 100), ti_str='CERES-EBAF Ed4.1')
 #
-# ceres.global_map(lon=lon, lat=lat, field=mean_tau,
-#                  varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
-#                  cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
+ceres.global_map(lon=lon, lat=lat, field=mean_tau,
+                  varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=0,
+                  cmap=cmap, cmap_lims=(0, 20), ti_str='CERES-EBAF Ed4.1')
 
 
 # -------------------------------------------------------
@@ -94,7 +94,7 @@ weights = ceres.cos_lat_weight(latitude)
 # compute anomalies by removing long-term monthly means
 lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
 tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_name)
-# cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
+cep_anomalies, cep_seasonal_cycle = ceres.compute_monthly_anomalies(cep, cep_name)
 # cet_anomalies, cet_seasonal_cycle = ceres.compute_monthly_anomalies(cet, cet_name)
 # tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_name)
 
@@ -130,12 +130,12 @@ tcf_anomalies, tcf_seasonal_cycle = ceres.compute_monthly_anomalies(tcf, tcf_nam
 
 global_mean_lwf = ceres.global_mean_time_series(field=lwf, weight=weights)
 
-global_mean_lwfa = ceres.global_mean_time_series(field=lwf_anomalies,weight=weights)
+global_mean_lwfa = ceres.global_mean_time_series(field=lwf_anomalies, weight=weights)
 
 # -------------------------------------------------------
 # plot time series
 # -------------------------------------------------------
 
-ceres.plot_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
+ceres.plot_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=5, start_yr=2000)
 
 ceres.plot_time_series(var=global_mean_lwfa, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)

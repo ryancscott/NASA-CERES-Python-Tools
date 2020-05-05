@@ -9,21 +9,22 @@
 # Purpose:  This library contains Python3 functions to read, process, analyze
 #           and plot data from the National Aeronautics and Space Administration
 #           (NASA) Clouds and the Earth's Radiant Energy System (CERES) Earth
-#           Radiation Budget (ERB) satellite mission. There are functions to
-#           manipulate Level-2 swath data and Level-3 gridded time-interpolated
-#           and spatially-averaged (TISA) fields. This library is for data
-#           development purposes (*_dev) and analysis of official-release
-#           data products. See function descriptions for additional information.
+#           Radiation Budget (ERB) satellite mission. Functions are included to
+#           manipulate Level 2 swath data and Level 3 gridded time-interpolated
+#           and spatially-averaged (TISA) fields. This library is for both data
+#           development purposes (*_dev) and analysis of officially released
+#           data products. See function descriptions below for additional info.
 #
-# To use:   import cerestools as ceres
+# To Use:   import cerestools as ceres
 #
 # Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
-#           Recommend installing these libraries using conda, pip, or an IDE
+#           Recommend installing the above libraries using conda, pip, or an IDE
 #
 # Author:   Ryan C. Scott, ryan.c.scott@nasa.gov
 #
 # Last Updated: March 27, 2020
 #
+# Every attempt is made to conform to PEP-8 standards
 # ==============================================================================
 # LEVEL 2
 # ---------------------
@@ -426,7 +427,7 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     variable = data.get()
     var_units = data.units
 
-    if fill == 1:
+    if fill is True:
         variable[variable == data._FillValue] = np.nan
 
     # get field at appropriate vertical level
@@ -509,7 +510,7 @@ def plot_swath(lon, lat, field,
     from cartopy.feature.nightshade import Nightshade
 
     # Map projection
-    projection = ccrs.PlateCarree(central_longitude=cen_lon)
+    projection = ccrs.Robinson(central_longitude=cen_lon)
 
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
@@ -532,20 +533,20 @@ def plot_swath(lon, lat, field,
                        edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
-        ax.set_extent([-180, 180, -90, 90], projection)
+        #ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
+        ax.set_global()
         ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
                 transform=ax.transAxes, fontsize=10)
 
-        if nightshade == 1:
+        if nightshade is True:
             ax.add_feature(Nightshade(date, alpha=0.15))
 
     # To use a different colorbar range each time, use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
-        im = axgr[i].scatter(lon, lat, c=field, s=1,
-                             transform=ccrs.PlateCarree(),
+        im = axgr[i].scatter(lon, lat, c=field, s=1, transform=ccrs.PlateCarree(),
                              vmin=limits[0], vmax=limits[1], cmap=cmap)
         axgr.cbar_axes[i].colorbar(im)
 
@@ -636,7 +637,7 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     axs[0].hist(swath_diff, bins=200, align='mid', rwidth=1)
     axs[0].grid()
     axs[0].set_axisbelow("True")
-    axs[0].set_title("CRS Ed4 minus CRS Ed2G", fontsize=11)
+    axs[0].set_title("Calculated minus Observed", fontsize=11)
     axs[0].set_xlabel(var_name + ' - ' + lev_name + "\n" + r"Flux difference ($\Delta$)")
     axs[0].set_xlim([-125, 125])
     axs[0].set_ylabel("Number of CERES Footprints")
@@ -665,8 +666,8 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     axs[1].grid()
     axs[1].set_axisbelow("True")
     axs[1].set_title(var_name + ' - ' + lev_name, fontsize=11)
-    axs[1].set_xlabel("CRS Edition 2G", fontsize=11)
-    axs[1].set_ylabel("CRS Edition 4", fontsize=11)
+    axs[1].set_xlabel("Observed Flux", fontsize=11)
+    axs[1].set_ylabel("Calculated Flux", fontsize=11)
 
     plt.show()
     return
@@ -742,12 +743,12 @@ def read_ebaf_geolocation(file_path):
 # ========================================================================
 
 
-def read_ebaf_start_month_year(filepath):
+def read_ebaf_start_month_year(file_path):
     """
     ----------------------------------------------------------------------------
     This function extracts the starting month and year from EBAF file
     ----------------------------------------------------------------------------
-    :param filepath: path to EBAF file
+    :param file_path: path to EBAF file
     ----------------------------------------------------------------------------
     :return: (1) month
              (2) year
@@ -756,7 +757,7 @@ def read_ebaf_start_month_year(filepath):
     import numpy as np
     from netCDF4 import Dataset
 
-    nc = Dataset(filepath, 'r')
+    nc = Dataset(file_path, 'r')
 
     time = nc.variables['time'][:]
     time_units = nc.variables['time'].units
@@ -1090,7 +1091,7 @@ def simple_regression(y_anomalies, x_anomalies):
     :param x_anomalies: independent variable [ntime x nlat x nlon]
     :param y_anomalies: dependent variable   [ntime x nlat x nlon]
     ----------------------------------------------------------------------------
-    :return: matrix of regression coefficients
+    :return: matrix of linear regression coefficients
     """
 
     import numpy as np
@@ -1235,7 +1236,7 @@ def global_map(lon, lat, field,
     fig = plt.figure(figsize=(8, 6.5))
 
     # Map projection
-    projection = ccrs.PlateCarree(central_longitude=cen_lon)
+    projection = ccrs.Robinson(central_longitude=cen_lon)
 
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
@@ -1256,7 +1257,8 @@ def global_map(lon, lat, field,
         # ax.add_feature(cartopy.feature.GSHHSFeature('low',edgecolor='none'), zorder=1, facecolor='black')
         ax.gridlines(color='black', linestyle=':')
         ax.set_title(ti_str)
-        ax.set_extent([-180, 180, -90, 90], projection)
+        #ax.set_extent([-180, 180, -60, 60], ccrs.PlateCarree())
+        ax.set_global()
         ax.text(0.5, -0.15, varname + ' \n' + varunits, va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor', transform=ax.transAxes, fontsize=10)
 

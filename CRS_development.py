@@ -30,7 +30,10 @@ print('============================================')
 file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212'
 
 path = '/Users/rcscott2/Desktop/CRS/my_output/'
+
 file_path = path + file
+
+file_path = '/Users/rcscott2/Desktop/CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010102'
 
 print(file_path)
 
@@ -54,7 +57,7 @@ platform = ceres.get_platform_dev(file=file)
 swd_tot, swd_tot_name, swd_tot_units, swd_tot_lev =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave flux - downward - total sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=0, fill=1)
 
 swd_clr, swd_clr_name, swd_clr_units, swd_clr_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
@@ -120,7 +123,6 @@ spec_lw_tot, spec_lw_tot_name, spec_lw_tot_units, spec_lw_tot_lev, =\
 print(spec_lw_tot.shape)
 
 
-
 print('============================================')
 print('\tPlotting Data...\t\t\t')
 print('============================================')
@@ -135,6 +137,11 @@ fd_colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
 title = platform + ' - Cloud Radiative Swath (CRS) Ed4 Development'
 
 # Shortwave plots
+
+ceres.plot_swath(lon=lon, lat=lat, field=swd_tot, nrows=1, ncols=1, cen_lon=180,
+                 varname=swd_tot_name, levname=swd_tot_lev, varunits=swd_tot_units,
+                 cmap=lw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=True, title_str=title)
 #
 # ceres.plot_swath(lon=lon, lat=lat, field=swd_clr, nrows=1, ncols=1, cen_lon=0,
 #                  varname=swd_clr_name, levname=swd_clr_lev, varunits=swd_clr_units,
@@ -166,8 +173,11 @@ title = platform + ' - Cloud Radiative Swath (CRS) Ed4 Development'
 
 # for k in range(14):
 #     ceres.plot_swath(lon=lon, lat=lat, field=spec_sw_tot[:, k], nrows=1, ncols=1, cen_lon=0,
-#                  varname='Narrowband SW flux' + ' - band ' + str(band[k+1]), levname='surface', varunits=spec_sw_tot_units,
-#                  cmap=sw_colormap, cmap_lims=(0, cmap_max[k]), date=date, date_str=date_str,
+#                  varname='Narrowband SW flux' + ' - band ' + str(band[k+1]),
+#                  levname='surface',
+#                  varunits=spec_sw_tot_units,
+#                  cmap=sw_colormap, cmap_lims=(0, cmap_max[k]),
+#                  date=date, date_str=date_str,
 #                  nightshade=1, title_str=title)
 
 # # Longwave plots

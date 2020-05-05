@@ -28,7 +28,9 @@ print('============================================')
 print('\t\t\tReading data...\t\t\t')
 print('============================================')
 
-field1, var1, units1 = ceres.read_ssf_var(file_path=file_path1, vararg=3, fill=1)
+field1, var1, units1 = ceres.read_ssf_var(file_path=file_path1,
+                                          var_name='CERES downward SW surface flux - Model B',
+                                          fill=True)
 
 print('============================================')
 print('\t\t\tReading time/date info...\t\t\t')
@@ -46,7 +48,7 @@ print('============================================')
 print('\t\t\tSetting colormap...\t\t\t')
 print('============================================')
 
-colormap = ceres.set_colormap(cmap_name=Balance_20, typarg=0)
+colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
 
 print('============================================')
 print('\t\t\tPlotting data...\t\t\t')
