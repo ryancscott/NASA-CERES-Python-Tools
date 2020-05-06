@@ -8,10 +8,12 @@ from palettable.scientific.sequential import LaPaz_20
 from palettable.scientific.sequential import Nuuk_20
 from palettable.scientific.sequential import Acton_20
 from palettable.scientific.sequential import Bilbao_20
+from palettable.scientific.sequential import Devon_20
 # colorbrewer
 from palettable.colorbrewer.sequential import BuPu_9_r
 
 import cerestools as ceres
+import numpy as np
 
 
 print('============================================')
@@ -22,18 +24,16 @@ print('============================================')
 # Aqua-FM3
 # file = 'CER_CRS4_Aqua-FM3-MODIS_GH4_2222TH.2019010100'
 
-
 # Terra-FM1
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2010062023'
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010100'
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011200'
-file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212'
+# file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212'
+file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010123'
 
 path = '/Users/rcscott2/Desktop/CRS/my_output/'
 
 file_path = path + file
-
-file_path = '/Users/rcscott2/Desktop/CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010102'
 
 print(file_path)
 
@@ -50,6 +50,15 @@ date, date_str = ceres.get_date(file=file)
 # Platform = satellite + flight model
 platform = ceres.get_platform_dev(file=file)
 
+# ----------------------
+# Clouds
+# ----------------------
+cld_frac, cld_frac_name, cld_frac_units, _ =\
+    ceres.read_crs_var_dev(file_path=file_path,
+                           var_name='Cloud fraction',
+                           lev_arg=-1, fill=1)
+
+cld_frac_tot = np.sum(cld_frac, axis=1)
 
 # ----------------------
 # Surface fluxes
@@ -127,6 +136,9 @@ print('============================================')
 print('\tPlotting Data...\t\t\t')
 print('============================================')
 
+# Cloud fraction colormap
+cf_colormap = ceres.set_colormap(cmap_name=Devon_20, typ_arg=0)
+
 # SW colormap - nice options = LaJolla_20_r, Nuuk_20
 sw_colormap = ceres.set_colormap(cmap_name=Nuuk_20, typ_arg=0)
 # LW colormap - nice options = Deep_20_r, Thermal_20, Bilbao_20
@@ -136,41 +148,49 @@ fd_colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
 
 title = platform + ' - Cloud Radiative Swath (CRS) Ed4 Development'
 
+# Clouds
+
+ceres.plot_swath(lon=lon, lat=lat, field=cld_frac_tot, nrows=1, ncols=1, cen_lon=0,
+                 varname=cld_frac_name, levname='', varunits=cld_frac_units,
+                 cmap=cf_colormap, cmap_lims=(0, 1), date=date, date_str=date_str,
+                 nightshade=True, title_str=title)
+
+
 # Shortwave plots
 
-ceres.plot_swath(lon=lon, lat=lat, field=swd_tot, nrows=1, ncols=1, cen_lon=180,
+ceres.plot_swath(lon=lon, lat=lat, field=swd_tot, nrows=1, ncols=1, cen_lon=0,
                  varname=swd_tot_name, levname=swd_tot_lev, varunits=swd_tot_units,
                  cmap=lw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
                  nightshade=True, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=swd_clr, nrows=1, ncols=1, cen_lon=0,
-#                  varname=swd_clr_name, levname=swd_clr_lev, varunits=swd_clr_units,
-#                  cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=swd_prs, nrows=1, ncols=1, cen_lon=0,
-#                  varname=swd_prs_name, levname=swd_prs_lev, varunits=swd_prs_units,
-#                  cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=swd_tna, nrows=1, ncols=1, cen_lon=0,
-#                  varname=swd_tna_name, levname=swd_tna_lev, varunits=swd_tna_units,
-#                  cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=sw_dif_tot, nrows=1, ncols=1, cen_lon=0,
-#                  varname=sw_dif_tot_name, levname=sw_dif_tot_lev, varunits=sw_dif_tot_units,
-#                  cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=sw_dir_tot, nrows=1, ncols=1, cen_lon=0,
-#                  varname=sw_dir_tot_name, levname=sw_dir_tot_lev, varunits=sw_dir_tot_units,
-#                  cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=swd_clr, nrows=1, ncols=1, cen_lon=0,
+                 varname=swd_clr_name, levname=swd_clr_lev, varunits=swd_clr_units,
+                 cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=swd_prs, nrows=1, ncols=1, cen_lon=0,
+                 varname=swd_prs_name, levname=swd_prs_lev, varunits=swd_prs_units,
+                 cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=swd_tna, nrows=1, ncols=1, cen_lon=0,
+                 varname=swd_tna_name, levname=swd_tna_lev, varunits=swd_tna_units,
+                 cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=sw_dif_tot, nrows=1, ncols=1, cen_lon=0,
+                 varname=sw_dif_tot_name, levname=sw_dif_tot_lev, varunits=sw_dif_tot_units,
+                 cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=sw_dir_tot, nrows=1, ncols=1, cen_lon=0,
+                 varname=sw_dir_tot_name, levname=sw_dir_tot_lev, varunits=sw_dir_tot_units,
+                 cmap=sw_colormap, cmap_lims=(0, 1000), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
 
 # band = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 # cmap_max = [5, 30, 80, 100, 150, 150, 150, 150, 100, 100, 60, 40, 30, 30]
-
+#
 # for k in range(14):
 #     ceres.plot_swath(lon=lon, lat=lat, field=spec_sw_tot[:, k], nrows=1, ncols=1, cen_lon=0,
 #                  varname='Narrowband SW flux' + ' - band ' + str(band[k+1]),
@@ -180,27 +200,27 @@ ceres.plot_swath(lon=lon, lat=lat, field=swd_tot, nrows=1, ncols=1, cen_lon=180,
 #                  date=date, date_str=date_str,
 #                  nightshade=1, title_str=title)
 
-# # Longwave plots
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=lwd_clr, nrows=1, ncols=1, cen_lon=0,
-#                  varname=lwd_clr_name, levname=lwd_clr_lev, varunits=lwd_clr_units,
-#                  cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=lwd_prs, nrows=1, ncols=1, cen_lon=0,
-#                  varname=lwd_prs_name, levname=lwd_prs_lev, varunits=lwd_prs_units,
-#                  cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=lwd_tna, nrows=1, ncols=1, cen_lon=0,
-#                  varname=lwd_tna_name, levname=lwd_tna_lev, varunits=lwd_tna_units,
-#                  cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
-#
-# ceres.plot_swath(lon=lon, lat=lat, field=lwd_tot, nrows=1, ncols=1, cen_lon=0,
-#                  varname=lwd_tot_name, levname=lwd_tot_lev, varunits=lwd_tot_units,
-#                  cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
-#                  nightshade=1, title_str=title)
+# Longwave plots
+
+ceres.plot_swath(lon=lon, lat=lat, field=lwd_clr, nrows=1, ncols=1, cen_lon=0,
+                 varname=lwd_clr_name, levname=lwd_clr_lev, varunits=lwd_clr_units,
+                 cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=lwd_prs, nrows=1, ncols=1, cen_lon=0,
+                 varname=lwd_prs_name, levname=lwd_prs_lev, varunits=lwd_prs_units,
+                 cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=lwd_tna, nrows=1, ncols=1, cen_lon=0,
+                 varname=lwd_tna_name, levname=lwd_tna_lev, varunits=lwd_tna_units,
+                 cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
+
+ceres.plot_swath(lon=lon, lat=lat, field=lwd_tot, nrows=1, ncols=1, cen_lon=0,
+                 varname=lwd_tot_name, levname=lwd_tot_lev, varunits=lwd_tot_units,
+                 cmap=lw_colormap, cmap_lims=(100, 400), date=date, date_str=date_str,
+                 nightshade=1, title_str=title)
 
 # Flux difference plots
 
@@ -219,7 +239,6 @@ ceres.plot_swath(lon=lon, lat=lat, field=swd_tot, nrows=1, ncols=1, cen_lon=180,
 #                  levname='at the surface', varunits='Watts per square meter',
 #                  cmap=fd_colormap, cmap_lims=(-25, 25), date=date, date_str=date_str,
 #                  nightshade=1, title_str=title)
-
 
 
 
