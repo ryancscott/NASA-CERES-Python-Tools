@@ -6,25 +6,25 @@
 #
 # Module:   cerestools.py
 #
-# Purpose:  This library contains Python3 functions to read, process, analyze
-#           and plot data from the National Aeronautics and Space Administration
-#           (NASA) Clouds and the Earth's Radiant Energy System (CERES) Earth
-#           Radiation Budget (ERB) satellite mission. Functions are included to
-#           manipulate Level 2 swath data and Level 3 gridded time-interpolated
-#           and spatially-averaged (TISA) fields. This library is for both data
-#           development purposes (*_dev) and analysis of officially released
-#           data products. See function descriptions below for additional info.
+# Purpose:  This Python3 library contains functions to read, process, analyze
+#           and plot data from the NASA Clouds and the Earth's Radiant Energy
+#           System (CERES) Earth Radiation Budget (ERB) satellite mission.
+#           Functions are included to manipulate Level 2 swath data and Level 3
+#           gridded time-interpolated and spatially-averaged (TISA) fields. This
+#           library is for both data development purposes (*_dev) and analysis of
+#           officially released data products. See function descriptions below
+#           for more information.
 #
 # To Use:   import cerestools as ceres
 #
 # Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
-#           Recommend installing the above libraries using conda, pip, or an IDE
+#           Recommend installing libraries using conda, pip, or an IDE
 #
 # Author:   Ryan C. Scott, ryan.c.scott@nasa.gov
 #
 # Last Updated: March 27, 2020
 #
-# Every attempt is made to conform to PEP-8 standards
+# Every attempt has been made to conform to Python PEP-8 coding standards
 # ==============================================================================
 # LEVEL 2
 # ---------------------
@@ -254,6 +254,7 @@ def read_crs_geolocation_dev(file_path):
              (3) pres_levs = FOV pressure levels [float]
              (4) obs_time = FOV observation time [float]
              (5) sza = FOV SZA at surface        [float]
+             (6) surf_ind = surface level index  [float]
     """
 
     from pyhdf import SD
@@ -273,10 +274,14 @@ def read_crs_geolocation_dev(file_path):
     time_of_obs = hdf.select("Julian Time")
     obs_time = time_of_obs.get()
 
+    surface_indices = hdf.select('Surface level index')
+    surf_ind = surface_indices.get()
+
     solar_zenith = hdf.select("CERES solar zenith at surface")
     sza = solar_zenith.get()
 
-    return fov_lat, fov_lon, pres_levs, obs_time, sza
+
+    return fov_lat, fov_lon, pres_levs, obs_time, surf_ind, sza
 
 
 # ==============================================================================
@@ -566,16 +571,16 @@ def swath_difference(field2, field1, day_only, sza):
     """
     ----------------------------------------------------------------------------
     This function calculates the difference between two swaths. It requires both
-    swaths to have the same footprints co-located in time and space. Its purpose
+    to have the same footprints co-located in time and space. Its purpose
     is to compare different versions of CERES products... such as SSF-
-    parameterized vs CRS-computed surface radiative fluxes, and so on.
+    parameterized vs CRS-computed surface radiative fluxes, etc.
     ----------------------------------------------------------------------------
     :param field2: swath 2 variable                      [float]
     :param field1: swath 1 variable                      [float]
     :param day_only: option : only analyze daytime FOVs  [boolean]
     :param sza: solar zenith angle                       [float]
     ----------------------------------------------------------------------------
-    :return: diff = difference between swaths            [float]
+    :return: difference = difference between swaths      [float]
     """
 
     import numpy as np
@@ -598,8 +603,8 @@ def swath_difference(field2, field1, day_only, sza):
 # ==============================================================================
 
 
-def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
-                                platform, day_only, sza):
+def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_str2,
+                                time_info, platform, day_only, sza):
     """
     ----------------------------------------------------------------------------
 
@@ -621,8 +626,9 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
 
     swath_diff = swath_difference(field2=field2, field1=field1, day_only=day_only, sza=sza)
 
-    mean_diff = np.nanmean(swath_diff)
+    mean_diff = np.nanmean(swath_diff) # bias
     sigma_diff = np.nanstd(swath_diff)
+    # rmsd =
 
     # number of FOVs compared
     print("Number of FOVs in swath: ", len(swath_diff))
@@ -637,7 +643,7 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     axs[0].hist(swath_diff, bins=200, align='mid', rwidth=1)
     axs[0].grid()
     axs[0].set_axisbelow("True")
-    axs[0].set_title("Calculated minus Observed", fontsize=11)
+    axs[0].set_title(ti_str1 + ' vs ' + ti_str2 + ' Flux', fontsize=11)
     axs[0].set_xlabel(var_name + ' - ' + lev_name + "\n" + r"Flux difference ($\Delta$)")
     axs[0].set_xlim([-125, 125])
     axs[0].set_ylabel("Number of CERES Footprints")
@@ -654,6 +660,11 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
         axs[0].text(0.05, 0.835, day_only_str, transform=axs[0].transAxes, fontsize=8,
                     verticalalignment='top', bbox=props)
 
+
+
+    field1[field1 > 1e6] = np.nan
+    field2[field2 > 1e6] = np.nan
+
     if np.nanmax(field1) < np.nanmax(field2):
         max = np.nanmax(field2) + 100
     else:
@@ -666,8 +677,8 @@ def swath_histogram_scatterplot(field1, field2, var_name, lev_name, time_info,
     axs[1].grid()
     axs[1].set_axisbelow("True")
     axs[1].set_title(var_name + ' - ' + lev_name, fontsize=11)
-    axs[1].set_xlabel("Observed Flux", fontsize=11)
-    axs[1].set_ylabel("Calculated Flux", fontsize=11)
+    axs[1].set_xlabel(ti_str1, fontsize=11)
+    axs[1].set_ylabel(ti_str2, fontsize=11)
 
     plt.show()
     return
