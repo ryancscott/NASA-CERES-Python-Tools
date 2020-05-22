@@ -102,6 +102,12 @@ ceres.plot_swath(lon=lon, lat=lat, field=difference, nrows=1, ncols=1, cen_lon=c
            cmap=colormap, cmap_lims=(-100, 100), date=date, date_str=date_str,
            nightshade=1, title_str=title_str)
 
-ceres.swath_histogram_scatterplot(field1, field2, var1, lev1, date_str,
-                                  ceres.get_platform(file1), day_only=False, sza=sza)
+ceres.swath_histogram_scatterplot(field2=field1, field1=field2,
+                                  var_name=var1,
+                                  lev_name=lev1,
+                                  ti_str1='',
+                                  ti_str2='',
+                                  time_info=date_str,
+                                  platform=ceres.get_platform(file1),
+                                  day_only=False, sza=sza)
 

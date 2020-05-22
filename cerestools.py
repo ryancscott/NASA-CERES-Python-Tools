@@ -1,16 +1,16 @@
 # ==============================================================================
 #
-#                   ----***** NASA CERES PYTHON TOOLS *****-----
+#                  -----***** NASA CERES PYTHON TOOLS *****-----
 #
 # ==============================================================================
 #
 # Module:   cerestools.py
 #
-# Purpose:  This Python3 library contains functions to read, process, analyze
+# Purpose:  This library contains Python 3 functions to read, process, analyze
 #           and plot data from the NASA Clouds and the Earth's Radiant Energy
 #           System (CERES) Earth Radiation Budget (ERB) satellite mission.
 #           Functions are included to manipulate Level 2 swath data and Level 3
-#           gridded time-interpolated and spatially-averaged (TISA) fields. This
+#           gridded time-interpolated and spatially-averaged (TISA) data. This
 #           library is for both data development purposes (*_dev) and analysis of
 #           officially released data products. See function descriptions below
 #           for more information.
@@ -18,16 +18,16 @@
 # To Use:   import cerestools as ceres
 #
 # Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
-#           Recommend installing libraries using conda, pip, or an IDE
+#           I recommend installing these libraries using conda, pip, or an IDE
 #
 # Author:   Ryan C. Scott, ryan.c.scott@nasa.gov
 #
-# Last Updated: March 27, 2020
+# Last Updated: May 12, 2020
 #
-# Every attempt has been made to conform to Python PEP-8 coding standards
+# This code conforms to Python PEP-8 coding standards
 # ==============================================================================
-# LEVEL 2
-# ---------------------
+#       LEVEL 2
+# =====================
 # get_date                    <- get the year, month, day, hour from input file
 # get_platform                <- get the satellite and instrument name
 # read_ssf_geolocation        <- get footprint lat, lon, etc. from SSF file
@@ -35,14 +35,18 @@
 # read_ssf_var                <- get variable from SSF file
 # read_crs_var                <- get variable from CRS file
 # read_crs_dev_var            <- get variable from CRS development file
+# read_day_of_crs_files       <- get 24 hr of data from CRS file
+# read_day_of_ssf_files       <- get 24 hr of data from SSF file
+# read_month_of_crs_files     <- get month of data from CRS file
+# read_month_of_ssf_files     <- get month of data from SSF file
 # swath_difference            <- compute difference between swaths
 # set_colormap                <- set colormap from palettable library
 # plot_swath                  <- plot SSF, CRS swath
-# swath_histogram_scatterplot <- produce histogram & scatter plot of swath diff
-# ---------------------
-#  LEVEL 3
-# ---------------------
-# print_nc_file_info          <- print info about variables in netCDF file
+# swath_histogram_scatterplot <- produce histogram of swath diff & scatter plot
+# =====================
+#       LEVEL 3
+# =====================
+# print_nc_file_info          <- print info about data in netCDF file
 # read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
 # read_ebaf_var               <- read field variable from EBAF file
 # compute_monthly_anomalies   <- compute interannual monthly anomalies
@@ -55,11 +59,10 @@
 # multiple_regression         <- regress field on multiple other fields
 # global_map                  <- plot map of gridded field
 # plot_time_series            <- plot time series of field
-#
-# -------------------
+# =====================
 # Under development :
-# -------------------
-# compute_linear_trend               <- fit linear trend
+# =====================
+# compute_linear_trend        <- calculate linear trend
 # ==============================================================================
 
 
@@ -268,7 +271,7 @@ def read_crs_geolocation_dev(file_path):
     longitude = hdf.select('Longitude of CERES FOV at surface')
     fov_lon = longitude.get()
 
-    pressure_levels = hdf.select('Pressure levels')
+    pressure_levels = hdf.select('Pressure profile')
     pres_levs = pressure_levels.get()
 
     time_of_obs = hdf.select("Julian Time")
@@ -446,6 +449,245 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
 
 # ==============================================================================
 
+# ==============================================================================
+
+
+def read_day_of_ssf_files(path, file_struc, variable, fill_nan):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire day (24 hr) of SSF data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without the hour portion at the end)
+    :param variable: variable to be read from file
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading SSF Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    tim_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    var_all = np.empty([])
+
+    for k in range(24):
+        if k < 10:
+            k = '0' + str(k)
+
+        file = file_struc + str(k)
+
+        file_path = path + file
+        print(file_path)
+
+        # read geolocation info from file
+        lat, lon, tim, sza = read_ssf_geolocation(file_path)
+        # read variable from file
+        var, var_name, var_units = \
+            read_ssf_var(file_path=file_path,
+                         var_name=variable,
+                         fill=fill_nan)
+
+        # len_tot contains the length (num FOVs) of each individual swath
+        len_tot.append(lat.shape[0])
+
+        # all of the swaths combined
+        sza_all = np.concatenate((sza_all, sza), axis=None)
+        tim_all = np.concatenate((tim_all, tim), axis=None)
+        lat_all = np.concatenate((lat_all, lat), axis=None)
+        lon_all = np.concatenate((lon_all, lon), axis=None)
+        var_all = np.concatenate((var_all, var), axis=None)
+
+    print(len_tot)
+    print(var_all.shape)
+
+    return var_all, lon_all, lat_all, sza_all
+
+
+# ==============================================================================
+
+
+def read_day_of_crs_files(path, file_struc, variable, lev_arg, fill_nan):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire day (24 hr) of CRS data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without the hour portion at the end)
+    :param variable: variable to be read from file
+    :param lev_arg: level argument (0 = TOA, 5 = sfc)
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    var_all = np.empty([])
+
+    for k in range(24):
+        if k < 10:
+            k = '0' + str(k)
+
+        file = file_struc + str(k)
+
+        file_path = path + file
+        print(file_path)
+
+        lat, lon, pres_levs, obs_tim, sfc_ind, sza = read_crs_geolocation_dev(file_path)
+
+        var, var_name, var_units, var_lev = \
+            read_crs_var_dev(file_path=file_path,
+                             var_name=variable,
+                             lev_arg=lev_arg,
+                             fill=fill_nan)
+
+        len_tot.append(lat.shape[0])
+        sza_all = np.concatenate((sza_all, sza), axis=None)
+        lat_all = np.concatenate((lat_all, lat), axis=None)
+        lon_all = np.concatenate((lon_all, lon), axis=None)
+        var_all = np.concatenate((var_all, var), axis=None)
+
+    print(len_tot)
+    print(var_all.shape)
+
+    return var_all, lon_all, lat_all, sza_all
+
+
+# =============================================================================
+
+
+def read_month_of_crs_files(path, file_struc, variable, lev_arg):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire month of CRS data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without the day & hour portion at the end)
+    :param variable: variable to be read from file
+    :param lev_arg: level argument (0 = TOA, 5 = sfc)
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    var_all = np.empty([])
+
+    for d in range(1, 16, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            file_path = path + file
+            print(file_path)
+
+            lat, lon, pres_levs, obs_tim, sfc_ind, sza = read_crs_geolocation_dev(file_path)
+
+            var, var_name, var_units, var_lev = \
+            read_crs_var_dev(file_path=file_path,
+                                   var_name=variable,
+                                   lev_arg=lev_arg, fill=False)
+
+            len_tot.append(lat.shape[0])
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            var_all = np.concatenate((var_all, var), axis=None)
+
+    print(len_tot)
+    print(var_all.shape)
+
+    return var_all, lon_all, lat_all, sza_all
+
+
+# =====================================================================
+
+
+def read_month_of_ssf_files(path, file_struc, variable):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire month of SSF data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without the day & hour portion at the end)
+    :param variable: variable to be read from file
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading SSF Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    tim_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    var_all = np.empty([])
+
+    for d in range(1, 16, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            file_path = path + file
+            print(file_path)
+
+            # read geolocation info from file
+            lat, lon, tim, sza = read_ssf_geolocation(file_path)
+            # read variable from file
+            var, var_name, var_units = \
+            read_ssf_var(file_path=file_path, var_name=variable, fill=True)
+
+            # len_tot contains the length (num FOVs) of each individual swath
+            len_tot.append(lat.shape[0])
+
+            # all of the swaths combined
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            tim_all = np.concatenate((tim_all, tim), axis=None)
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            var_all = np.concatenate((var_all, var), axis=None)
+
+    print(len_tot)
+    print(var_all.shape)
+
+    return var_all, lon_all, lat_all, sza_all
+
+
+# ==============================================================================
+
 
 def set_colormap(cmap_name, typ_arg):
     """
@@ -603,7 +845,7 @@ def swath_difference(field2, field1, day_only, sza):
 # ==============================================================================
 
 
-def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_str2,
+def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti_str2, ti_str1,
                                 time_info, platform, day_only, sza):
     """
     ----------------------------------------------------------------------------
@@ -626,7 +868,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_
 
     swath_diff = swath_difference(field2=field2, field1=field1, day_only=day_only, sza=sza)
 
-    mean_diff = np.nanmean(swath_diff) # bias
+    mean_diff = np.nanmean(swath_diff)  # bias
     sigma_diff = np.nanstd(swath_diff)
     # rmsd =
 
@@ -637,13 +879,13 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_
     print("Number of FOVs compared: ", N)
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-    fig.suptitle('CERES ' + platform + ' - Cloud Radiative Swath (CRS)' + ' - ' + time_info, fontsize=11)
+    fig.suptitle('CERES ' + platform + ' - ' + suptitle + ' - ' + time_info, fontsize=11)
 
     # histogram of difference
     axs[0].hist(swath_diff, bins=200, align='mid', rwidth=1)
     axs[0].grid()
     axs[0].set_axisbelow("True")
-    axs[0].set_title(ti_str1 + ' vs ' + ti_str2 + ' Flux', fontsize=11)
+    axs[0].set_title(ti_str2 + ' minus ' + ti_str1 + ' Flux', fontsize=11)
     axs[0].set_xlabel(var_name + ' - ' + lev_name + "\n" + r"Flux difference ($\Delta$)")
     axs[0].set_xlim([-125, 125])
     axs[0].set_ylabel("Number of CERES Footprints")
@@ -660,10 +902,13 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_
         axs[0].text(0.05, 0.835, day_only_str, transform=axs[0].transAxes, fontsize=8,
                     verticalalignment='top', bbox=props)
 
+    field1[field1 >= 1.0e6] = np.nan
+    field2[field2 >= 1.0e6] = np.nan
 
-
-    field1[field1 > 1e6] = np.nan
-    field2[field2 > 1e6] = np.nan
+    bad_indices = np.isnan(field1) | np.isnan(field2)
+    good_indices = ~bad_indices
+    field1 = field1[good_indices]
+    field2 = field2[good_indices]
 
     if np.nanmax(field1) < np.nanmax(field2):
         max = np.nanmax(field2) + 100
@@ -673,12 +918,19 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, ti_str1, ti_
     # scatter plot
     axs[1].plot(range(2000), range(2000), color='black', zorder=0)
     axs[1].scatter(field1, field2, s=0.05)
+    #axs[1].hist2d(field1, field2, bins=50, cmap='ocean_r')
     axs[1].set(xlim=(0, max), ylim=(0, max))
     axs[1].grid()
     axs[1].set_axisbelow("True")
     axs[1].set_title(var_name + ' - ' + lev_name, fontsize=11)
     axs[1].set_xlabel(ti_str1, fontsize=11)
     axs[1].set_ylabel(ti_str2, fontsize=11)
+
+    # show descriptive statistics
+    str1 = "r = " + str(np.around(np.corrcoef(field1, field2)[0][1], decimals=3))
+    props = dict(facecolor='white', alpha=0.85)
+    axs[1].text(0.05, 0.95, str1, transform=axs[1].transAxes, fontsize=8,
+                verticalalignment='top', bbox=props)
 
     plt.show()
     return
@@ -896,7 +1148,7 @@ def compute_monthly_anomalies(field, field_name):
 def cos_lat_weight(lat_vector):
     """
     ----------------------------------------------------------------------------
-    This function takes a latitude array and computes a matrix of cos(lat)
+    This function takes a latitude array and creates a matrix of cos(lat)
     weights in order to perform area-weighted averaging of a field.
     ----------------------------------------------------------------------------
     :param lat_vector: vector of latitudes
@@ -1058,7 +1310,7 @@ def global_mean_time_series(field, weight):
 # ========================================================================
 
 
-def plot_time_series(var, name, units, start_mo, start_yr):
+def plot_monthly_time_series(var, name, units, start_mo, start_yr):
     """
     ----------------------------------------------------------------------------
     This function plots a time series of arbitrary length, such as one
@@ -1081,8 +1333,8 @@ def plot_time_series(var, name, units, start_mo, start_yr):
     plt.grid()
     plt.plot(var, label=name, marker='.')
     plt.title(name)
-    xticklabels = [str(start_mo) + '/' + str((start_yr+i))[2:] for i in range(record_len)]
-    plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=10)
+    #xticklabels = [str(start_mo) + '/' + str((start_yr+i))[2:] for i in range(record_len)]
+    #plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=10)
     plt.yticks(fontsize=10)
     plt.ylabel(units)
     plt.legend(fontsize=8)
