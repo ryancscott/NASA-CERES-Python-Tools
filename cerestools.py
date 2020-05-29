@@ -7,20 +7,21 @@
 # Module:   cerestools.py
 #
 # Purpose:  This library contains Python 3 functions to read, process, analyze
-#           and plot data from the NASA Clouds and the Earth's Radiant Energy
-#           System (CERES) Earth Radiation Budget (ERB) satellite mission.
+#           and visualize data from the NASA Clouds and the Earth's Radiant Energy
+#           System (CERES) satellite mission.
 #           Functions are included to manipulate Level 2 swath data and Level 3
-#           gridded time-interpolated and spatially-averaged (TISA) data. This
+#           time-interpolated and spatially-averaged (TISA) gridded fields. This
 #           library is for both data development purposes (*_dev) and analysis of
-#           officially released data products. See function descriptions below
+#           official release data products. See function descriptions below
 #           for more information.
 #
 # To Use:   import cerestools as ceres
 #
-# Requires: numpy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
+# Requires: numpy, scipy, matplotlib, netcdf4, pyhdf, cartopy, datetime, palettable
 #           I recommend installing these libraries using conda, pip, or an IDE
 #
-# Author:   Ryan C. Scott, ryan.c.scott@nasa.gov
+# Author:   Ryan C. Scott, SSAI
+#           ryan.c.scott@nasa.gov
 #
 # Last Updated: May 12, 2020
 #
@@ -30,11 +31,13 @@
 # =====================
 # get_date                    <- get the year, month, day, hour from input file
 # get_platform                <- get the satellite and instrument name
+# get_platform_dev            <- same as above but for dev files
 # read_ssf_geolocation        <- get footprint lat, lon, etc. from SSF file
 # read_crs_geolocation        <- get footprint lat, lon, etc. from CRS file
+# read_crs_geolocation_dev    <- same as above but for dev files
 # read_ssf_var                <- get variable from SSF file
 # read_crs_var                <- get variable from CRS file
-# read_crs_dev_var            <- get variable from CRS development file
+# read_crs_var_dev            <- get variable from CRS development file
 # read_day_of_crs_files       <- get 24 hr of data from CRS file
 # read_day_of_ssf_files       <- get 24 hr of data from SSF file
 # read_month_of_crs_files     <- get month of data from CRS file
@@ -69,7 +72,7 @@
 def get_date(file):
     """
     ----------------------------------------------------------------------------
-    This function reads input file yyyymmddhh information and transforms
+    This function reads input file "yyyymmddhh" information and transforms
     the date string into a readable form for plotting. It also outputs date
     information for ingestion by the cartopy NightShade function. Works with
     official and development data files that end with date info. See line below.
@@ -101,8 +104,8 @@ def get_date(file):
 def get_platform(file):
     """
     ----------------------------------------------------------------------------
-    This function retrieves the satellite and flight model info from officially
-    released CERES SSF or CRS files.
+    This function retrieves the satellite and flight model information from
+    official release CERES SSF or CRS HDF files.
     ----------------------------------------------------------------------------
     :param file: e.g., CER_CRS_Terra-FM1-MODIS_Edition2G_023034.2010062023
     ----------------------------------------------------------------------------
@@ -135,8 +138,8 @@ def get_platform(file):
 def get_platform_dev(file):
     """
     ----------------------------------------------------------------------------
-    This function retrieves the satellite and flight model info from CRS
-    DEVELOPMENT files...
+    This function retrieves the satellite and flight model info from CERES
+    CRS *DEVELOPMENT* HDF files...
     ----------------------------------------------------------------------------
     :param file: e.g., CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212
     ----------------------------------------------------------------------------
@@ -171,9 +174,9 @@ def read_ssf_geolocation(file_path):
     """
     ----------------------------------------------------------------------------
     This function reads footprint-level geolocation information from
-    CERES Level 2 SSF file
+    CERES Level 2 SSF HDF files
     ----------------------------------------------------------------------------
-    :param file_path: path to file
+    :param file_path: path to SSF file
     ----------------------------------------------------------------------------
     :return: (1) fov_lat = FOV latitude          [float]
              (2) fov_lon = FOV longitude         [float]
@@ -208,9 +211,9 @@ def read_crs_geolocation(file_path):
     """
     ----------------------------------------------------------------------------
     This function reads footprint-level geolocation information from
-    CERES Level 2 CRS file
+    CERES Level 2 CRS HDF files
     ----------------------------------------------------------------------------
-    :param file_path: path to  file
+    :param file_path: path to CRS file
     ----------------------------------------------------------------------------
     :return: (1) fov_lat = FOV latitude          [float]
              (2) fov_lon = FOV longitude         [float]
@@ -248,7 +251,7 @@ def read_crs_geolocation_dev(file_path):
     """
     ----------------------------------------------------------------------------
     This function reads footprint-level geolocation information from
-    CERES Level 2 CRS file
+    CERES Level 2 CRS HDF DEVELOPMENT files
     ----------------------------------------------------------------------------
     :param file_path: path to  file
     ----------------------------------------------------------------------------
@@ -283,7 +286,6 @@ def read_crs_geolocation_dev(file_path):
     solar_zenith = hdf.select("CERES solar zenith at surface")
     sza = solar_zenith.get()
 
-
     return fov_lat, fov_lon, pres_levs, obs_time, surf_ind, sza
 
 
@@ -294,7 +296,7 @@ def read_ssf_var(file_path, var_name, fill):
     """
     ----------------------------------------------------------------------------
     This function reads variables from CERES Level 2 Single Scanner Footprint
-    (SSF) official-release HDF data files
+    (SSF) official release HDF data files
     ----------------------------------------------------------------------------
     :param file_path: path to file               [string]
     :param var_name:  variable name              [string]
@@ -309,26 +311,16 @@ def read_ssf_var(file_path, var_name, fill):
     from pyhdf import SD
     hdf = SD.SD(file_path)
 
-    # # select variable using integer index: vararg
-    # switch = {
-    #     0: 'CERES downward SW surface flux - Model A',
-    #     1: 'CERES downward LW surface flux - Model A',
-    #     2: 'CERES downward SW surface flux - Model B',
-    #     3: 'CERES downward LW surface flux - Model B'
-    # }
-    # var_name = switch.get(vararg)
-    #
-    # print("Getting", switch.get(vararg, "N/A"))
-
     # select and get the variable
     data = hdf.select(var_name)
     variable = data.get()
     var_units = data.units
 
+    # replace fill values with NaN
     if fill is True:
         variable[variable == data._FillValue] = np.nan
 
-    # get field at appropriate vertical level
+    # get field
     var_field = variable
 
     return var_field, var_name, var_units
@@ -341,7 +333,7 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
     """
     ----------------------------------------------------------------------------
     This function reads variables from CERES Level 2 Cloud Radiative Swath
-    (CRS) official-release HDF data files
+    (CRS) official release HDF files
     ----------------------------------------------------------------------------
     :param file_path: path to file           [string]
     :param var_name: variable name           [string]
@@ -379,6 +371,7 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
     var_units = data.units
     var_fill = data._FillValue
 
+    # option to replace fill values with NaN
     if fill is True:
         variable[variable == var_fill] = np.nan
 
@@ -393,12 +386,12 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
 
 # ==============================================================================
 
-# This function will become obsolete once I rename variables in crs2hdf.f90
+
 def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     """
     ----------------------------------------------------------------------------
     This function reads data from CERES Level 2 Cloud Radiative Swath
-    DEVELOPMENT files - those I produce by running the CRS4 .f90 code on AMI
+    DEVELOPMENT HDF files - those I produce by running the CRS4 .f90 code on AMI
     ----------------------------------------------------------------------------
     :param file_path: path to data file [string]
     :param var_name: variable argument
@@ -435,6 +428,7 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     variable = data.get()
     var_units = data.units
 
+    # option to replace fill values with NaN
     if fill is True:
         variable[variable == data._FillValue] = np.nan
 
@@ -449,15 +443,13 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
 
 # ==============================================================================
 
-# ==============================================================================
-
 
 def read_day_of_ssf_files(path, file_struc, variable, fill_nan):
     """
     ----------------------------------------------------------------------------
-    This function loops over and reads an entire day (24 hr) of SSF data
+    This function loops over and reads an entire day (24 hr) of SSF data.
     ----------------------------------------------------------------------------
-    :param path: path to files
+    :param path: path to directory containing data files
     :param file_struc: file structure (without the hour portion at the end)
     :param variable: variable to be read from file
     :return: variable, lat, lon, sza
@@ -476,9 +468,9 @@ def read_day_of_ssf_files(path, file_struc, variable, fill_nan):
     lon_all = np.empty([])
     var_all = np.empty([])
 
-    for k in range(24):
-        if k < 10:
-            k = '0' + str(k)
+    for k in range(23):        # Should be 24 for CERES SSF, 23 for FLASHFlux since
+        if k < 10:             # the final swath length differs between FF and CERES
+            k = '0' + str(k)   # still need to look into why... and fix?
 
         file = file_struc + str(k)
 
@@ -565,65 +557,6 @@ def read_day_of_crs_files(path, file_struc, variable, lev_arg, fill_nan):
     return var_all, lon_all, lat_all, sza_all
 
 
-# =============================================================================
-
-
-def read_month_of_crs_files(path, file_struc, variable, lev_arg):
-    """
-    ----------------------------------------------------------------------------
-    This function loops over and reads an entire month of CRS data
-    ----------------------------------------------------------------------------
-    :param path: path to files
-    :param file_struc: file structure (without the day & hour portion at the end)
-    :param variable: variable to be read from file
-    :param lev_arg: level argument (0 = TOA, 5 = sfc)
-    :return: variable, lat, lon, sza
-    ----------------------------------------------------------------------------
-    """
-    import numpy as np
-
-    print('============================================')
-    print('\tReading CRS Files...\t\t\t')
-    print('============================================')
-
-    len_tot = []
-    sza_all = np.empty([])
-    lat_all = np.empty([])
-    lon_all = np.empty([])
-    var_all = np.empty([])
-
-    for d in range(1, 16, 1):
-        if d < 10:
-            d = '0' + str(d)
-
-        for k in range(24):
-            if k < 10:
-                k = '0' + str(k)
-
-            file = file_struc + str(d) + str(k)
-
-            file_path = path + file
-            print(file_path)
-
-            lat, lon, pres_levs, obs_tim, sfc_ind, sza = read_crs_geolocation_dev(file_path)
-
-            var, var_name, var_units, var_lev = \
-            read_crs_var_dev(file_path=file_path,
-                                   var_name=variable,
-                                   lev_arg=lev_arg, fill=False)
-
-            len_tot.append(lat.shape[0])
-            sza_all = np.concatenate((sza_all, sza), axis=None)
-            lat_all = np.concatenate((lat_all, lat), axis=None)
-            lon_all = np.concatenate((lon_all, lon), axis=None)
-            var_all = np.concatenate((var_all, var), axis=None)
-
-    print(len_tot)
-    print(var_all.shape)
-
-    return var_all, lon_all, lat_all, sza_all
-
-
 # =====================================================================
 
 
@@ -686,6 +619,65 @@ def read_month_of_ssf_files(path, file_struc, variable):
     return var_all, lon_all, lat_all, sza_all
 
 
+# =============================================================================
+
+
+def read_month_of_crs_files(path, file_struc, variable, lev_arg):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire month of CRS data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without day & hour portion at the end)
+    :param variable: variable to be read from file
+    :param lev_arg: level argument (0 = TOA, 5 = sfc)
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    var_all = np.empty([])
+
+    for d in range(1, 16, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            file_path = path + file
+            print(file_path)
+
+            lat, lon, pres_levs, obs_tim, sfc_ind, sza = read_crs_geolocation_dev(file_path)
+
+            var, var_name, var_units, var_lev = \
+            read_crs_var_dev(file_path=file_path,
+                                   var_name=variable,
+                                   lev_arg=lev_arg, fill=False)
+
+            len_tot.append(lat.shape[0])
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            var_all = np.concatenate((var_all, var), axis=None)
+
+    print(len_tot)
+    print(var_all.shape)
+
+    return var_all, lon_all, lat_all, sza_all
+
+
 # ==============================================================================
 
 
@@ -694,8 +686,8 @@ def set_colormap(cmap_name, typ_arg):
     ----------------------------------------------------------------------------
     Selects colormap from palettable library
     ----------------------------------------------------------------------------
-    :param colormap_name: name of colormap from palettable [string]
-    :param typ_arg:       0 = continuous, 1 = discrete     [integer]
+    :param cmap_name: name of colormap from palettable [string]
+    :param typ_arg:   0 = continuous, 1 = discrete     [integer]
     ----------------------------------------------------------------------------
     :return: colormap object
     """
@@ -707,14 +699,14 @@ def set_colormap(cmap_name, typ_arg):
     print("\nUsing a", switch.get(typ_arg, "N/A"), "colormap...")
 
     if typ_arg == 0:
-        color_map = cmap_name.mpl_colormap
+        colormap = cmap_name.mpl_colormap
     elif typ_arg == 1:
         from matplotlib.colors import ListedColormap
-        color_map = ListedColormap(cmap_name.mpl_colors)
+        colormap = ListedColormap(cmap_name.mpl_colors)
     elif typ_arg != 1 or typ_arg != 0:
         print('Please input 0 for continuous or 1 for discrete ...')
 
-    return color_map
+    return colormap
 
 
 # ==============================================================================
@@ -727,8 +719,8 @@ def plot_swath(lon, lat, field,
                date_str, title_str):
     """
     ----------------------------------------------------------------------------
-    This function plots a swath of footprint-level data
-    FLASHFlux, SSF, or CRS
+    This function plots a swath of footprint-level CERES data
+    e.g., FLASHFlux, SSF, or CRS
     ----------------------------------------------------------------------------
     :param lon: FOV longitude
     :param lat: FOV latitude
@@ -812,14 +804,14 @@ def plot_swath(lon, lat, field,
 def swath_difference(field2, field1, day_only, sza):
     """
     ----------------------------------------------------------------------------
-    This function calculates the difference between two swaths. It requires both
-    to have the same footprints co-located in time and space. Its purpose
-    is to compare different versions of CERES products... such as SSF-
-    parameterized vs CRS-computed surface radiative fluxes, etc.
+    This function calculates the difference between two swaths, which requires
+    them to have the same footprints co-located in time and space. Its purpose
+    is to compare different versions of CERES products, such as SSF-
+    parameterized vs CRS-computed surface radiative fluxes.
     ----------------------------------------------------------------------------
     :param field2: swath 2 variable                      [float]
     :param field1: swath 1 variable                      [float]
-    :param day_only: option : only analyze daytime FOVs  [boolean]
+    :param day_only: option to only analyze daytime FOVs [boolean]
     :param sza: solar zenith angle                       [float]
     ----------------------------------------------------------------------------
     :return: difference = difference between swaths      [float]
@@ -839,26 +831,34 @@ def swath_difference(field2, field1, day_only, sza):
             if sza[i] > 90:
                 difference[i] = np.nan
 
+    # night time only
+    elif day_only is False:
+        for i in range(field2.shape[0]):
+            if sza[i] < 90:
+                difference[i] = np.nan
+
     return difference
 
 
 # ==============================================================================
 
 
-def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti_str2, ti_str1,
-                                time_info, platform, day_only, sza):
+def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
+                                suptitle, ti_str2, ti_str1,
+                                date_str, platform, day_only, sza):
     """
     ----------------------------------------------------------------------------
-
+    This function creates a scatterplot and a histogram of the difference between
+    two fields. It also yields basic statistics about the data.
     ----------------------------------------------------------------------------
-    :param field1:
     :param field2:
-    :param var_name:
-    :param lev_name:
-    :param time_info:
-    :param platform:
-    :param day_only:
-    :param sza:
+    :param field1:
+    :param var_name: variable name
+    :param lev_name: level name
+    :param date_str:
+    :param platform: satellite and flight model
+    :param day_only: day only?
+    :param sza: FOV solar zenith angle
     ----------------------------------------------------------------------------
     :return:
     """
@@ -868,9 +868,9 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti
 
     swath_diff = swath_difference(field2=field2, field1=field1, day_only=day_only, sza=sza)
 
-    mean_diff = np.nanmean(swath_diff)  # bias
-    sigma_diff = np.nanstd(swath_diff)
-    # rmsd =
+    mean_diff = np.nanmean(swath_diff)             # mean of the difference, i.e., bias
+    sigma_diff = np.nanstd(swath_diff)             # standard deviation of the difference
+    rms_diff = np.sqrt(np.nanmean(swath_diff**2))  # RMS difference
 
     # number of FOVs compared
     print("Number of FOVs in swath: ", len(swath_diff))
@@ -879,7 +879,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti
     print("Number of FOVs compared: ", N)
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-    fig.suptitle('CERES ' + platform + ' - ' + suptitle + ' - ' + time_info, fontsize=11)
+    fig.suptitle('CERES ' + platform + ' - ' + suptitle + ' - ' + date_str, fontsize=11)
 
     # histogram of difference
     axs[0].hist(swath_diff, bins=200, align='mid', rwidth=1)
@@ -890,21 +890,28 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti
     axs[0].set_xlim([-125, 125])
     axs[0].set_ylabel("Number of CERES Footprints")
 
-    # show descriptive statistics
-    textstr = "N = " + str(N) + "\n" + r"Mean: $\bar{\Delta}$ = " + str(np.around(mean_diff, 2)) + "\n" + \
-              r"Stdv: $\sigma_{\Delta}$ = " + str(np.around(sigma_diff, 2))
+    # show basic descriptive statistics
+    textstr = "N = " + str(N) + "\n" + \
+              r"Mean: $\bar{\Delta}$ = " + str(np.around(mean_diff, 2)) + "\n" + \
+              r"Stdv: $\sigma_{\Delta}$ = " + str(np.around(sigma_diff, 2)) + "\n" + \
+              "RMSD = " + str(np.around(rms_diff, 2))
     props = dict(facecolor='white', alpha=0.85)
     axs[0].text(0.05, 0.95, textstr, transform=axs[0].transAxes, fontsize=8,
                 verticalalignment='top', bbox=props)
 
     if day_only is True:
         day_only_str = "Daytime only"
-        axs[0].text(0.05, 0.835, day_only_str, transform=axs[0].transAxes, fontsize=8,
+        axs[0].text(0.05, 0.8, day_only_str, transform=axs[0].transAxes, fontsize=8,
+                    verticalalignment='top', bbox=props)
+    elif day_only is False:
+        night_only_str = "Nighttime only"
+        axs[0].text(0.05, 0.8, night_only_str, transform=axs[0].transAxes, fontsize=8,
                     verticalalignment='top', bbox=props)
 
-    field1[field1 >= 1.0e6] = np.nan
-    field2[field2 >= 1.0e6] = np.nan
+    field1[field1 > 1.e6] = np.nan
+    field2[field2 > 1.e6] = np.nan
 
+    # remove NaN values
     bad_indices = np.isnan(field1) | np.isnan(field2)
     good_indices = ~bad_indices
     field1 = field1[good_indices]
@@ -934,6 +941,54 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name, suptitle, ti
 
     plt.show()
     return
+
+# ========================================================================
+
+
+def grid_to_1x1_degree(lat_data, lon_data, variable):
+    """
+    ----------------------------------------------------------------------------
+    This functions grids CERES footprints to a 1 deg x 1 deg latitude-longitude
+    grid. A routine from scipy stats is used to bin and aggregate FOVs into
+    1 deg x 1 deg regions, and then statistics such as the average value, the
+    number of footprints present, the median, etc. may all be calculated.
+    ----------------------------------------------------------------------------
+    :param lat_data: FOV latitude array
+    :param lon_data: FOV longitude array
+    :param variable: FOV variable for which a statistic will be computed
+    :return: the field of gridded FOVs
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy import stats
+
+    lat_bins = np.arange(-90, 91)
+    lon_bins = np.arange(0, 361)
+
+    # print('Lat bins:')
+    # print(lat_bins)
+    # print('Lon bins:')
+    # print(lon_bins)
+
+    # Each FOV has lat and lon indices that map to each grid box
+    # lat_ind = np.digitize(lat_data, lat_bins)
+    # lon_ind = np.digitize(lon_data, lon_bins)
+
+    # Loop over FOVs and show their index
+    # for n in range(lat_data.size):
+    #    print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
+    #    print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
+
+    # Compute mean in each bin - can change statistic to 'count', 'mean', 'median' etc...
+    gridded = stats.binned_statistic_2d(lon_data, lat_data, variable, statistic=np.nanmean, bins=[lon_bins, lat_bins])
+    gridded_stat = np.flipud(np.rot90(gridded.statistic))
+
+    # Quick & dirty plot of the result
+    #plt.pcolor(gridded_stat)
+    #plt.show()
+
+    return gridded_stat
 
 
 # ========================================================================
