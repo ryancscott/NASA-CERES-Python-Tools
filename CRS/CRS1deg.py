@@ -1,3 +1,4 @@
+
 import cerestools as ceres
 from palettable.cmocean.sequential import Thermal_20
 from palettable.colorbrewer.sequential import BuPu_9_r
@@ -12,27 +13,23 @@ lat, lat_name, lat_units = ceres.read_ebaf_var(file_path=file_path, variable='la
 lon, lon_name, lon_units = ceres.read_ebaf_var(file_path=file_path, variable='lon')
 
 
-
-
-
 # CERES Ed4A SSF data
-# var_all4, lon_all4, lat_all4, sza_all4 = \
-#      ceres.read_day_of_ssf_files(path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
-#                                  file_struc='CER_SSF_Terra-FM1-MODIS_Edition4A_404405.20190101',
-#                                  variable='CERES LW TOA flux - upwards',
-#                                  fill_nan=True)
+var_all4, lon_all4, lat_all4, sza_all4 = \
+     ceres.read_day_of_ssf_files(path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
+                                 file_struc='CER_SSF_Terra-FM1-MODIS_Edition4A_404405.20190101',
+                                 variable='CERES LW TOA flux - upwards',
+                                 fill=True)
 
 # CERES Ed4 CRS data
-var_all4, lon_all4, lat_all4, sza_all4 = ceres.read_day_of_crs_files(
-                               path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
-                               file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190101',
-                               variable='Shortwave flux - upward - total sky',
-                               lev_arg=0,
-                               fill_nan=True)
+# var_all4, lon_all4, lat_all4, sza_all4 = ceres.read_day_of_crs_files(
+#                                path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
+#                                file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190101',
+#                                variable='Shortwave flux - upward - total sky',
+#                                lev_arg=0,
+#                                fill_nan=True)
 
 
-gridded_var_all4 = ceres.grid_to_1x1_degree(lat_all4, lon_all4, lat_all4)
-
+gridded_var_all4 = ceres.grid_to_1x1_degree(lat_all4, lon_all4, var_all4)
 
 print("Shape of 1 deg x 1 deg gridded field:\n")
 print(gridded_var_all4.shape)
@@ -40,11 +37,10 @@ print(gridded_var_all4.shape)
 
 cmap = ceres.set_colormap(Thermal_20, 0)
 
-
 ceres.global_map(lon=lon, lat=lat, field=gridded_var_all4,
-                 varname='Latitude', varunits='',# r'W m$^{-2}$',
+                 varname='CERES LW TOA flux - upwards', varunits=r'W m$^{-2}$',
                  nrows=1, ncols=1, cen_lon=0,
-                 cmap=cmap, cmap_lims=(-90, 90), ti_str='CERES Terra FM1 "CRS1deg" JAN-01-2019')
+                 cmap=cmap, cmap_lims=(0, 350), ti_str='CERES Terra FM1 "CRS1deg" JAN-01-2019')
 
 
 # import numpy as np
@@ -125,9 +121,7 @@ ceres.global_map(lon=lon, lat=lat, field=gridded_var_all4,
 # #
 # # print(b[0][0])
 #
-#
-#
-#
+
 # # print(np.sort(lat_ind))
 # # print(np.sort(lat_data))
 # #

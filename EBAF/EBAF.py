@@ -2,9 +2,7 @@
 # Developing code to manipulate/analyze gridded CERES data
 # ========================================================================
 
-
 import cerestools as ceres
-
 
 # cmocean
 from palettable.cmocean.sequential import Deep_20_r

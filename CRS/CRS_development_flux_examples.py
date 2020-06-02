@@ -29,9 +29,9 @@ print('============================================')
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010100'
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011200'
 # file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019011212'
-file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010123'
-
-path = '/Users/rcscott2/Desktop/CRS/my_output/'
+# file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010123'
+file = 'CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.2019010112'
+path = '/Users/rcscott2/Desktop/CRS/my_output/JAN-2019/'
 
 file_path = path + file
 
@@ -42,7 +42,7 @@ print('\tReading Data...\t\t\t')
 print('============================================')
 
 # Geolocation
-lat, lon, pres_levs, obs_tim, sza = ceres.read_crs_geolocation_dev(file_path)
+lat, lon, pres_levs, obs_tim, sfc_ind, sza = ceres.read_crs_geolocation_dev(file_path)
 
 # Date information
 date, date_str = ceres.get_date(file=file)

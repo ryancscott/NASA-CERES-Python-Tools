@@ -80,21 +80,21 @@ var_all3, lon_all3, lat_all3, sza_all3 = ceres.read_day_of_crs_files(
                                file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190103',
                                variable='Shortwave flux - downward - clear sky',
                                lev_arg=5,
-                               fill_nan=True)
+                               fill=True)
 
 var_all4, lon_all4, lat_all4, sza_all4 = ceres.read_day_of_crs_files(
                                path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
                                file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190103',
                                variable='Shortwave flux - downward - pristine sky',
                                lev_arg=5,
-                               fill_nan=True)
+                               fill=True)
 
 aod_all, _, _, _ = ceres.read_day_of_crs_files(
                                path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
                                file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190103',
                                variable='MATCH AOT',
                                lev_arg=-1,
-                               fill_nan=True)
+                               fill=True)
 
 # computes var_all3 minus var_all4
 diff = ceres.swath_difference(field2=var_all3, field1=var_all4, day_only=True, sza=sza_all3)
@@ -105,10 +105,9 @@ aod_colormap = ceres.set_colormap(cmap_name=Devon_20, typ_arg=0)
 
 # # plot the swath
 ceres.plot_swath(lon=lon_all3, lat=lat_all3, field=diff, nrows=1, ncols=1, cen_lon=0,
-                 varname='Shortwave flux - downward', levname='surface', varunits='Watts per square meter',
+                 varname='Longwave flux - downward', levname='surface', varunits='Watts per square meter',
                  cmap=diff_colormap, cmap_lims=(-100, 100), date='20190101', date_str='01/01/2019:00-23h',
                  nightshade=False, title_str='Terra FM1 CERES CRS Ed4 clear-sky minus pristine-sky')
-
 
 # Daytime only
 aod_all[sza_all3 > 90] = np.nan
@@ -148,7 +147,6 @@ ceres.plot_swath(lon=lon_all3, lat=lat_all3, field=aod_all, nrows=1, ncols=1, ce
 #                  varname='Longwave flux - downward - total sky', levname='surface', varunits='Watts per square meter',
 #                  cmap=lw_colormap, cmap_lims=(-50, 50), date='20190101', date_str='01/01/2019:00-23h',
 #                  nightshade=False, title_str='Terra FM1 CERES CRS Ed4 (computed) minus CERES SSF Ed4A (observed)')
-
 
 # ceres.swath_histogram_scatterplot(field2=var_all2, field1=var_all1,
 #                                   var_name='Shortwave flux - downward',
