@@ -56,7 +56,7 @@ platform = ceres.get_platform_dev(file=file)
 cld_frac, cld_frac_name, cld_frac_units, _ =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Cloud fraction',
-                           lev_arg=-1, fill=1)
+                           lev_arg=-1, fill=True)
 
 cld_frac_tot = np.sum(cld_frac, axis=1)
 
@@ -66,41 +66,41 @@ cld_frac_tot = np.sum(cld_frac, axis=1)
 swd_tot, swd_tot_name, swd_tot_units, swd_tot_lev =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave flux - downward - total sky',
-                           lev_arg=0, fill=1)
+                           lev_arg=5, fill=True)
 
 swd_clr, swd_clr_name, swd_clr_units, swd_clr_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave flux - downward - clear sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 swd_prs, swd_prs_name, swd_prs_units, swd_prs_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave flux - downward - pristine sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 swd_tna, swd_tna_name, swd_tna_units, swd_tna_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave flux - downward - total sky no aerosol',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 lwd_tot, lwd_tot_name, lwd_tot_units, lwd_tot_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Longwave flux - downward - total sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 lwd_clr, lwd_clr_name, lwd_clr_units, lwd_clr_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Longwave flux - downward - clear sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 lwd_prs, lwd_prs_name, lwd_prs_units, lwd_prs_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Longwave flux - downward - pristine sky',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 lwd_tna, lwd_tna_name, lwd_tna_units, lwd_tna_lev = \
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Longwave flux - downward - total sky no aerosol',
-                           lev_arg=5, fill=1)
+                           lev_arg=5, fill=True)
 
 # Single level OR column integrated parameters
 # aot, aot_name, aot_units, aot_lev = ceres.read_crs_var_dev(file_path=file_path, vararg=16, levarg=-1, fill=1)
@@ -110,24 +110,24 @@ lwd_tna, lwd_tna_name, lwd_tna_units, lwd_tna_lev = \
 sw_dif_tot, sw_dif_tot_name, sw_dif_tot_units, sw_dif_tot_lev =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave diffuse surface flux - total sky',
-                           lev_arg=-1, fill=1)
+                           lev_arg=-1, fill=True)
 
 sw_dir_tot, sw_dir_tot_name, sw_dir_tot_units, sw_dir_tot_lev =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Shortwave direct surface flux - total sky',
-                           lev_arg=-1, fill=1)
+                           lev_arg=-1, fill=True)
 
 spec_sw_tot, spec_sw_tot_name, spec_sw_tot_units, spec_sw_tot_lev, =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Spectral SW surface flux - downward - total sky',
-                           lev_arg=-1, fill=1)
+                           lev_arg=-1, fill=True)
 
 print(spec_sw_tot.shape)
 
 spec_lw_tot, spec_lw_tot_name, spec_lw_tot_units, spec_lw_tot_lev, =\
     ceres.read_crs_var_dev(file_path=file_path,
                            var_name='Spectral LW surface flux - downward - total sky',
-                           lev_arg=-1, fill=1)
+                           lev_arg=-1, fill=True)
 
 print(spec_lw_tot.shape)
 

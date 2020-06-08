@@ -26,7 +26,7 @@
 #
 # Last Updated: June 1, 2020
 #
-# This code conforms to Python PEP-8 coding standards
+# This code conforms to Python PEP-8 coding standards.
 # ==============================================================================
 #       LEVEL 2
 # =====================
@@ -51,6 +51,8 @@
 # =====================
 #       LEVEL 3
 # =====================
+# read_syn1deg_hdf            <- read variable from SYN1deg HDF file
+#
 # print_nc_file_info          <- print info about data in netCDF file
 # read_ebaf_geolocation       <- read lat, lon, etc. from EBAF file
 # read_ebaf_var               <- read field variable from EBAF file
@@ -100,7 +102,7 @@ def get_date(file):
     return date, date_str
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def get_platform(file):
@@ -134,7 +136,7 @@ def get_platform(file):
     return platform
 
 
-# =====================================================================
+# ==============================================================================
 
 
 def get_platform_dev(file):
@@ -169,7 +171,7 @@ def get_platform_dev(file):
     return platform
 
 
-# =====================================================================
+# ==============================================================================
 
 
 def read_ssf_geolocation(file_path):
@@ -206,7 +208,7 @@ def read_ssf_geolocation(file_path):
     return fov_lat, fov_lon, obs_time, sza
 
 
-# =====================================================================
+# ==============================================================================
 
 
 def read_crs_geolocation(file_path):
@@ -255,7 +257,7 @@ def read_crs_geolocation_dev(file_path):
     This function reads footprint-level geolocation information from CERES
     Level 2 CRS HDF *DEVELOPMENT* files
     ----------------------------------------------------------------------------
-    :param file_path: path to  file
+    :param file_path: path to file
     ----------------------------------------------------------------------------
     :return: (1) fov_lat = FOV latitude          [float]
              (2) fov_lon = FOV longitude         [float]
@@ -276,7 +278,7 @@ def read_crs_geolocation_dev(file_path):
     longitude = hdf.select('Longitude of CERES FOV at surface')
     fov_lon = longitude.get()
 
-    pressure_levels = hdf.select('Pressure levels')  # 'Pressure profile'
+    pressure_levels = hdf.select('Pressure profile')  # or 'Pressure profile'
     pres_levs = pressure_levels.get()
 
     time_of_obs = hdf.select("Julian Time")
@@ -298,10 +300,11 @@ def read_ssf_var(file_path, var_name, index, fill):
     """
     ----------------------------------------------------------------------------
     This function reads data from CERES Level 2 Single Scanner Footprint
-    (SSF) official release HDF data files
+    (SSF) official release HDF files
     ----------------------------------------------------------------------------
     :param file_path: path to file               [string]
     :param var_name:  variable name              [string]
+    :param index:     index of desired column    [integer]
     :param fill:      option to fill NaN values  [boolean]
     ----------------------------------------------------------------------------
     :return: (1) field = variable data           [float]
@@ -322,7 +325,9 @@ def read_ssf_var(file_path, var_name, index, fill):
     if fill is True:
         variable[variable == data._FillValue] = np.nan
 
-    # get field at appropriate vertical level
+    var_field = np.empty([variable.shape[0]])
+    # if the data being read is of size (numFOVs x 1), set index = -1
+    # get data from appropriate column of HDF file
     if index < 0:
         var_field = variable
     elif index >= 0:
@@ -337,7 +342,7 @@ def read_ssf_var(file_path, var_name, index, fill):
 def read_crs_var(file_path, var_name, lev_arg, fill):
     """
     ----------------------------------------------------------------------------
-    This function reads variables from CERES Level 2 Cloud Radiative Swath
+    This function reads data from CERES Level 2 Cloud Radiative Swath
     (CRS) official release HDF files
     ----------------------------------------------------------------------------
     :param file_path: path to file           [string]
@@ -380,11 +385,12 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
     if fill is True:
         variable[variable == var_fill] = np.nan
 
+    var_field = np.empty([variable.shape[0]])
     # get field at appropriate vertical level
     if lev_arg < 0:
         var_field = variable
     elif lev_arg >= 0:
-        var_field = variable[:, lev_arg]git
+        var_field = variable[:, lev_arg]
 
     return var_field, var_name, var_units, lev_name
 
@@ -396,12 +402,12 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     """
     ----------------------------------------------------------------------------
     This function reads data from CERES Level 2 Cloud Radiative Swath
-    DEVELOPMENT HDF files - those I produce by running the CRS4 .f90 code on AMI
+    *DEVELOPMENT* HDF files - produce by running the CRS4 .f90 code on AMI
     ----------------------------------------------------------------------------
-    :param file_path: path to data file [string]
-    :param var_name: variable argument
-    :param lev_arg: level argument
-    :param fill: fill NaN value option
+    :param file_path: path to data file  [string]
+    :param var_name: variable name       [string]
+    :param lev_arg: level argument       [integer]
+    :param fill: fill NaN value option   [boolean]
     ----------------------------------------------------------------------------
     :return: (1) var_field = variable field data  [float]
              (2) var_name = variable name         [string]
@@ -437,11 +443,22 @@ def read_crs_var_dev(file_path, var_name, lev_arg, fill):
     if fill is True:
         variable[variable == data._FillValue] = np.nan
 
+    var_field = np.empty([variable.shape[0]])
     # get field at appropriate vertical level
     if lev_arg < 0:
         var_field = variable
     elif lev_arg >= 0:
         var_field = variable[:, lev_arg]
+
+    # elif lev_arg == 5:
+    #     surface_indices = hdf.select('Surface level index')
+    #     sfc_ind = surface_indices.get()
+    #     sfc_ind[sfc_ind > 10] = 5  # if footprint is bad
+    #     sfc_ind = list(sfc_ind)
+    #     sfc_ind = [int(el) for el in sfc_ind]
+    #     for i in range(variable.shape[0]):
+    #         ind = np.int(sfc_ind[i] - 1.0)
+    #         var_field[i] = variable[i, ind]
 
     return var_field, var_name, var_units, lev_name
 
@@ -957,13 +974,13 @@ def grid_to_1x1_degree(lat_data, lon_data, variable):
     """
     ----------------------------------------------------------------------------
     This functions grids CERES footprints to a 1 deg x 1 deg latitude-longitude
-    grid. A routine from scipy stats is used to bin and aggregate FOVs into
+    grid. A scipy stats routine is used to bin and aggregate FOVs into
     1 deg x 1 deg regions, and then statistics such as the average value, the
-    number of footprints present, the median, etc. may all be calculated.
+    number of footprints present, the median, etc. may be calculated.
     ----------------------------------------------------------------------------
     :param lat_data: FOV latitude array
     :param lon_data: FOV longitude array
-    :param variable: FOV variable for which a statistic will be computed
+    :param variable: variable for which gridded statistic will be computed
     :return: the field of gridded FOVs
     ----------------------------------------------------------------------------
     """
@@ -971,32 +988,73 @@ def grid_to_1x1_degree(lat_data, lon_data, variable):
     import matplotlib.pyplot as plt
     from scipy import stats
 
-    lat_bins = np.arange(-90, 91)
-    lon_bins = np.arange(0, 361)
+    lat_bins = np.arange(-90, 91)    # lat: -90 to 90 deg
+    # lon_bins = np.arange(0, 361)   # lon: 0 to 360
+    lon_bins = np.arange(-180, 181)  # lon: -180 to 180
 
-    # print('Lat bins:')
-    # print(lat_bins)
-    # print('Lon bins:')
-    # print(lon_bins)
+    print('Lat bins:')
+    print(lat_bins)
+    print('Lon bins:')
+    print(lon_bins)
 
-    # Each FOV has lat and lon indices that map to each grid box
+    # # Each FOV has lat and lon indices that map to each grid box
     # lat_ind = np.digitize(lat_data, lat_bins)
     # lon_ind = np.digitize(lon_data, lon_bins)
-
-    # Loop over FOVs and show their index
+    #
+    # # Loop over FOVs and show their index
     # for n in range(lat_data.size):
-    #    print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
-    #    print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
+    #     print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
+    #     print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
 
     # Compute mean in each bin - can change statistic to 'count', 'mean', 'median' etc...
     gridded = stats.binned_statistic_2d(lon_data, lat_data, variable, statistic=np.nanmean, bins=[lon_bins, lat_bins])
-    gridded_stat = np.flipud(np.rot90(gridded.statistic))
+    #gridded_stat = np.flipud(np.rot90(gridded.statistic))
+    gridded_stat = np.rot90(gridded.statistic)
 
     # Quick & dirty plot of the result
     #plt.pcolor(gridded_stat)
+    #plt.colorbar()
     #plt.show()
 
+    # Write the result to netCDF or HDF file that can later be loaded
+
     return gridded_stat
+
+
+# ========================================================================
+
+
+def read_syn1deg_hdf(file_path, var_name, fill):
+    """
+    ----------------------------------------------------------------------------
+    This function reads data from CERES Level 3 Synoptic 1-degree (SYN1deg)
+    HDF data files. Presumably, it should also work for other
+    ----------------------------------------------------------------------------
+    :param file_path:
+    :param var_name: variable name [string]
+    :return:
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+    from pyhdf import SD
+    hdf = SD.SD(file_path)
+
+    # select and get the variable
+    data = hdf.select(var_name)
+    variable = data.get()
+    var_name2 = data.long_name
+    var_units = data.units
+
+    print('Reading... ' + var_name2)
+
+    # replace fill values with NaN
+    if fill is True:
+        print('Replacing fill values with NaN...')
+        variable[variable == data._FillValue] = np.nan
+
+    var_field = variable
+
+    return var_field, var_name2, var_units
 
 
 # ========================================================================
@@ -1181,6 +1239,7 @@ def compute_monthly_anomalies(field, field_name):
     # calculate anomalies
     monthly_anomalies = np.subtract(field, seasonal_cycle)
 
+    # add which lat/lon this corresponds to on the plots...
     r = 100
     p = 120
     # add lat lon location info to plots...
@@ -1396,8 +1455,8 @@ def plot_monthly_time_series(var, name, units, start_mo, start_yr):
     plt.grid()
     plt.plot(var, label=name, marker='.')
     plt.title(name)
-    #xticklabels = [str(start_mo) + '/' + str((start_yr+i))[2:] for i in range(record_len)]
-    #plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=10)
+    xticklabels = [str(start_mo) + '/' + str((start_yr+i))[2:] for i in range(record_len)]
+    plt.xticks(ticks=range(0, record_len, 12), labels=xticklabels, fontsize=10)
     plt.yticks(fontsize=10)
     plt.ylabel(units)
     plt.legend(fontsize=8)
