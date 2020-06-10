@@ -42,8 +42,6 @@ var_all4, lon_all4, lat_all4, sza_all4 = \
 gridded_var_all4 = ceres.grid_to_1x1_deg_equal_angle(lat_all4, lon_all4, var_all4)
 
 
-
-
 # select colormap
 cmap = ceres.set_colormap(Thermal_20, 0)
 

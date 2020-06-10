@@ -43,12 +43,13 @@
 # read_day_of_ssf_files       <- get 24 hr of data from SSF file
 # read_month_of_ssf_files     <- get month of data from SSF file
 # read_month_of_crs_files     <- get month of data from CRS file
-# swath_lon_360_to_180        <- convert FOV lons from 0 to 360 to -180 to 180
+# swath_lon_360_to_180        <- convert FOV lon range 0 to 360 to -180 to 180
+# swath_daytime_only          <- extract only daytime FOVs
 # swath_difference            <- compute difference between swaths
 # set_colormap                <- set colormap from palettable library
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram of swath diff & scatter plot
-# grid_to_1x1_degree          <- bin FOVs into 1x1 grid boxes & compute statistics
+# grid_to_1x1_degree          <- bin FOVs in 1x1 grid boxes & compute statistics
 # =====================
 #       LEVEL 3
 # =====================
@@ -711,10 +712,10 @@ def swath_lon_360_to_180(lon):
     """
     ----------------------------------------------------------------------------
     This function converts the range of footprint longitude values from
-    0 to 360 to -180 to 180
+    0 to 360 deg to -180 to 180 deg
     ----------------------------------------------------------------------------
-    :param lon: swath longitude with range 0 to 360      [float]
-    :return: (1) lon_ new longitudes ranging -180 to 180 [float]
+    :param lon: swath longitudes     ranging from 0 to 360      [float]
+    :return: (1) lon_ new longitudes ranging from -180 to 180   [float]
     ----------------------------------------------------------------------------
     """
     import numpy as np
@@ -848,6 +849,44 @@ def plot_swath(lon, lat, field,
 
     plt.show()
     return
+
+
+# ==============================================================================
+
+
+def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
+    """
+    ----------------------------------------------------------------------------
+    This function extracts daytime footprints from a time series of CERES FOVs
+    using a solar zenith angle cut-off value.
+    ----------------------------------------------------------------------------
+    :param lat: FOV latitudes                   [float]
+    :param lon: FOV longitudes                  [float]
+    :param var: variable under consideration    [float]
+    :param sza: FOV solar zenith angle          [float]
+    :param sza_cutoff: SZA cut-off value        [float]
+    :return:
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    # if footprint SZA > cutoff value, ignore
+    for i in range(len(sza)):
+        if sza[i] >= sza_cutoff:
+            sza[i] = np.nan
+            var[i] = np.nan
+            lat[i] = np.nan
+            lon[i] = np.nan
+
+    # ignore/remove NaNs
+    bad_indices = np.isnan(var)
+    good_indices = ~bad_indices
+    lat = lat[good_indices]
+    lon = lon[good_indices]
+    sza = sza[good_indices]
+    var = var[good_indices]
+
+    return lat, lon, var, sza
 
 
 # ==============================================================================
