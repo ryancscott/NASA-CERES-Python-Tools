@@ -41,8 +41,9 @@
 # read_crs_var_dev            <- get variable from CRS development file
 # read_day_of_crs_files       <- get 24 hr of data from CRS file
 # read_day_of_ssf_files       <- get 24 hr of data from SSF file
-# read_month_of_crs_files     <- get month of data from CRS file
 # read_month_of_ssf_files     <- get month of data from SSF file
+# read_month_of_crs_files     <- get month of data from CRS file
+# swath_lon_360_to_180        <- convert FOV lons from 0 to 360 to -180 to 180
 # swath_difference            <- compute difference between swaths
 # set_colormap                <- set colormap from palettable library
 # plot_swath                  <- plot SSF, CRS swath
@@ -706,6 +707,32 @@ def read_month_of_crs_files(path, file_struc, variable, lev_arg):
 # ==============================================================================
 
 
+def swath_lon_360_to_180(lon):
+    """
+    ----------------------------------------------------------------------------
+    This function converts the range of footprint longitude values from
+    0 to 360 to -180 to 180
+    ----------------------------------------------------------------------------
+    :param lon: swath longitude with range 0 to 360      [float]
+    :return: (1) lon_ new longitudes ranging -180 to 180 [float]
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    lon_ = np.empty([len(lon)])
+    print(lon_.shape)
+    for i in range(len(lon)):
+        if lon[i] > 180:
+            lon_[i] = lon[i] - 360
+        elif lon[i] <= 180:
+            lon_[i] = lon[i]
+
+    return lon_
+
+
+# ==============================================================================
+
+
 def set_colormap(cmap_name, typ_arg):
     """
     ----------------------------------------------------------------------------
@@ -747,21 +774,21 @@ def plot_swath(lon, lat, field,
     This function plots a swath of footprint-level CERES data
     e.g., FLASHFlux, SSF, or CRS
     ----------------------------------------------------------------------------
-    :param lon: FOV longitude
-    :param lat: FOV latitude
-    :param field: variable
-    :param varname: variable name
-    :param levname: level name
-    :param varunits: variable units
-    :param nrows: number of rows
-    :param ncols: number of columns
-    :param cen_lon: central longitude
-    :param cmap: colormap
-    :param cmap_lims: colormap limits
-    :param date: date info for nightshade
-    :param nightshade: whether to use nighshade feature
-    :param date_str: date string
-    :param title_str: title string
+    :param lon: FOV longitude               [float]
+    :param lat: FOV latitude                [float]
+    :param field: variable                  [float]
+    :param varname: variable name           [string]
+    :param levname: level name              [string]
+    :param varunits: variable units         [string]
+    :param nrows: number of rows            [integer]
+    :param ncols: number of columns         [integer]
+    :param cen_lon: central longitude       [float]
+    :param cmap: colormap                   []
+    :param cmap_lims: colormap limits       [tuple]
+    :param date: date info for nightshade   []
+    :param nightshade: use nightshade?      [boolean]
+    :param date_str: date string            [string]
+    :param title_str: title string          [string]
     ----------------------------------------------------------------------------
     :return: plot of the data
     """
@@ -836,7 +863,7 @@ def swath_difference(field2, field1, day_only, sza):
     ----------------------------------------------------------------------------
     :param field2: swath 2 variable                      [float]
     :param field1: swath 1 variable                      [float]
-    :param day_only: option to only analyze daytime FOVs [boolean]
+    :param day_only: option to only use daytime FOVs     [boolean]
     :param sza: solar zenith angle                       [float]
     ----------------------------------------------------------------------------
     :return: difference = difference between swaths      [float]
@@ -876,16 +903,16 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
     This function creates a scatterplot and a histogram of the difference between
     two fields. It also yields basic statistics about the data.
     ----------------------------------------------------------------------------
-    :param field2:
-    :param field1:
-    :param var_name: variable name
-    :param lev_name: level name
-    :param date_str:
-    :param platform: satellite and flight model
-    :param day_only: day only?
+    :param field2:                                   [float]
+    :param field1:                                   [float]
+    :param var_name: name of variable being compared [string]
+    :param lev_name: name of vertical level          [string]
+    :param date_str: time/data information           [string]
+    :param platform: satellite and flight model      [string]
+    :param day_only: day only?                       [      ]
     :param sza: FOV solar zenith angle
     ----------------------------------------------------------------------------
-    :return:
+    :return: plot of histogram and scatterplot
     """
 
     import numpy as np
@@ -970,53 +997,76 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
 # ========================================================================
 
 
-def grid_to_1x1_degree(lat_data, lon_data, variable):
+def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     """
     ----------------------------------------------------------------------------
-    This functions grids CERES footprints to a 1 deg x 1 deg latitude-longitude
-    grid. A scipy stats routine is used to bin and aggregate FOVs into
-    1 deg x 1 deg regions, and then statistics such as the average value, the
-    number of footprints present, the median, etc. may be calculated.
+    This functions bins & grids CERES footprints to a 1 deg x 1 deg equal angle
+    latitude-longitude grid using the SciPy stats routine binned_statistic_2d.
+    After FOVs are aggregated into 1 deg x 1 deg regions it computes the mean
+    of the input "variable" - alternatively, it can compute the # of footprints,
+    the median, or other statistics (including user-defined functions).
     ----------------------------------------------------------------------------
-    :param lat_data: FOV latitude array
-    :param lon_data: FOV longitude array
-    :param variable: variable for which gridded statistic will be computed
-    :return: the field of gridded FOVs
+    :param lat_data: FOV latitude array                            [float]
+    :param lon_data: FOV longitude array                           [float]
+    :param variable: for which gridded statistic will be computed  [float]
+    :param lon_360:  use 0 to 360 or -180 to 180 longitude bins    [boolean]
+    :return: the field of gridded FOVs                             [float]
     ----------------------------------------------------------------------------
     """
+    import time
     import numpy as np
     import matplotlib.pyplot as plt
     from scipy import stats
 
+    # consider adding as parameters of the function...
     lat_bins = np.arange(-90, 91)    # lat: -90 to 90 deg
-    # lon_bins = np.arange(0, 361)   # lon: 0 to 360
-    lon_bins = np.arange(-180, 181)  # lon: -180 to 180
 
-    print('Lat bins:')
+    if lon_360 is True:
+        lon_bins = np.arange(0, 361)     # lon: 0 to 360
+    elif lon_360 is False:
+        lon_bins = np.arange(-180, 181)  # lon: -180 to 180
+
+    print('Griding and averaging footprints to 1 x 1',
+          'degree equal angle grid boxes...\n')
+
+    print('Lat bins:\n')
     print(lat_bins)
-    print('Lon bins:')
+    print('Lon bins:\n')
     print(lon_bins)
 
-    # # Each FOV has lat and lon indices that map to each grid box
+    # # each FOV has lat and lon indices that map to each grid box
     # lat_ind = np.digitize(lat_data, lat_bins)
     # lon_ind = np.digitize(lon_data, lon_bins)
     #
-    # # Loop over FOVs and show their index
+    # # loop over FOVs and show their index
     # for n in range(lat_data.size):
     #     print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
     #     print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
 
-    # Compute mean in each bin - can change statistic to 'count', 'mean', 'median' etc...
-    gridded = stats.binned_statistic_2d(lon_data, lat_data, variable, statistic=np.nanmean, bins=[lon_bins, lat_bins])
-    #gridded_stat = np.flipud(np.rot90(gridded.statistic))
+    # start timing it
+    tic = time.time()
+
+    # compute mean in each grid box - statistics: 'count', 'mean', 'median'
+    gridded = stats.binned_statistic_2d(lon_data, lat_data, variable,
+                                        statistic=np.nanmean,
+                                        bins=[lon_bins, lat_bins])
+
     gridded_stat = np.rot90(gridded.statistic)
 
-    # Quick & dirty plot of the result
-    #plt.pcolor(gridded_stat)
-    #plt.colorbar()
-    #plt.show()
+    # finish timing it, print relevant info
+    toc = time.time()
+    print(toc - tic, 'seconds elapsed during grid_to_1x1_deg_equal_angle\n')
 
-    # Write the result to netCDF or HDF file that can later be loaded
+    print("Shape of 1 deg x 1 deg gridded field:")
+    print(gridded_stat.shape)
+
+    # quick & dirty plot of the result
+    plt.pcolor(gridded_stat)
+    plt.colorbar()
+    plt.show()
+
+    # would be nice to write the result to a netCDF or HDF file...
+    # especially in cases where this takes a long time to run...
 
     return gridded_stat
 
@@ -1028,7 +1078,7 @@ def read_syn1deg_hdf(file_path, var_name, fill):
     """
     ----------------------------------------------------------------------------
     This function reads data from CERES Level 3 Synoptic 1-degree (SYN1deg)
-    HDF data files. Presumably, it should also work for other
+    HDF data files. Presumably, it should also work for other L3 files...
     ----------------------------------------------------------------------------
     :param file_path:
     :param var_name: variable name [string]

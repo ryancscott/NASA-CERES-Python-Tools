@@ -39,14 +39,9 @@ var_all4, lon_all4, lat_all4, sza_all4 = \
 
 
 # Grid and average footprints into 1 deg x 1 deg grid boxes
-tic = time.time()
-gridded_var_all4 = ceres.grid_to_1x1_degree(lat_all4, lon_all4, var_all4)
-toc = time.time()
-print(toc-tic, 'sec elapsed, ceres.grid_to_1x1_degree')
+gridded_var_all4 = ceres.grid_to_1x1_deg_equal_angle(lat_all4, lon_all4, var_all4)
 
 
-print("Shape of 1 deg x 1 deg gridded field:\n")
-print(gridded_var_all4.shape)
 
 
 # select colormap
