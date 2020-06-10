@@ -16,8 +16,8 @@ from palettable.cmocean.sequential import Thermal_20
 #                                fill=True)
 
 
-terra_crs_file = '/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019010100'
-aqua_crs_file = '/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019010100'
+terra_crs_file = '/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019010101'
+aqua_crs_file = '/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019010101'
 
 
 date, date_str = ceres.get_date(terra_crs_file)
@@ -64,6 +64,7 @@ terra_mask = np.zeros([180, 360])
 aqua_mask = np.zeros([180, 360])
 both_mask = np.zeros([180, 360])
 
+
 for i in range(180):
     for j in range(360):
         if terra_var_gridded[i, j] > 0:
@@ -84,7 +85,7 @@ plt.title("Aqua CERES FM3 mask")
 plt.colorbar()
 plt.show()
 
-plt.imshow(aqua_mask)
+plt.imshow(terra_mask + aqua_mask)
 plt.title("Terra CERES FM1 + Aqua CERES FM3 mask")
 plt.colorbar()
 plt.show()
@@ -94,7 +95,8 @@ plt.title(r"Terra $\bigcap$ Aqua")
 plt.colorbar()
 plt.show()
 
-plt.imshow(terra_mask-both_mask)
+terra_only_mask = terra_mask-both_mask
+plt.imshow(terra_only_mask)
 plt.title(r"Terra minus (Terra $\bigcap$ Aqua)")
 plt.colorbar()
 plt.show()
@@ -136,47 +138,42 @@ num_geo_lw_obs, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
                                               var_name='num_geo_lw_obs',
                                               fill=False)
 
-print("Num SW obs shape: ", num_sw_obs.shape)
-print("Num GEO SW obs shape: ", num_geo_sw_obs.shape)
-print("Num LW obs shape: ", num_lw_obs.shape)
-print("Num GEO LW obs shape: ", num_geo_lw_obs.shape)
+print("SYN1deg Terra-Aqua SW obs shape: ", num_sw_obs.shape)
+print("SYN1deg GEO SW obs shape: ", num_geo_sw_obs.shape)
+print("SYN1deg Terra-AquaLW obs shape: ", num_lw_obs.shape)
+print("SYN1deg GEO LW obs shape: ", num_geo_lw_obs.shape)
 
-# for k in range(24):
-#     plt.imshow(num_lw_obs[k, :, :]*toa_lw_up_all[k, :, :])
-#     plt.title('TOA LW flux ' + str(k) + 'hr' + ' times Terra-Aqua mask')
-#     plt.show()
 
-for k in range(2):
+for k in range(7):
     plt.imshow(num_sw_obs[k, :, :])
-    plt.title('Number of SW obs ' + date_str)
+    plt.title('SYN1deg Terra-Aqua SW obs ' + date_str)
+    plt.show()
+
+for k in range(7):
+    plt.imshow(num_lw_obs[k, :, :])
+    plt.title('SYN1deg Terra-Aqua LW obs ' + date_str)
     plt.show()
 
 # for k in range(24):
 #     plt.imshow(num_geo_sw_obs[k, :, :]+num_sw_obs[k, :, :])
-#     plt.title('Number of SW + GEO SW obs ' + str(k) + 'hr')
+#     plt.title('SYN1deg Terra-Aqua + GEO SW obs ' + str(k) + 'hr')
 #     plt.show()
-
-for k in range(2):
-    plt.imshow(num_lw_obs[k, :, :])
-    plt.title('Number of LW obs ' + date_str)
-    plt.show()
 #
 # for k in range(24):
 #     plt.imshow(num_geo_lw_obs[k, :, :])
-#     plt.title('Number of GEO LW obs ' + str(k) + 'hr')
+#     plt.title('SYN1deg Terra-Aqua + GEO LW obs ' + str(k) + 'hr')
 #     plt.show()
 
 
 # select colormap
 cmap = ceres.set_colormap(Thermal_20, 0)
+
 # plot the newly gridded field
 ceres.global_map(lon=lon_syn1deg, lat=lat_syn1deg, field=terra_var_gridded,
                  varname='CERES LW TOA flux - upwards', varunits=r'W m$^{-2}$',
                  nrows=1, ncols=1, cen_lon=0,
                  cmap=cmap, cmap_lims=(150, 350), ti_str=r'Terra CERES FM1 CRS1deg$_{\beta}$ ' + date_str)
 
-# select colormap
-cmap = ceres.set_colormap(Thermal_20, 0)
 # plot the newly gridded field
 ceres.global_map(lon=lon_syn1deg, lat=lat_syn1deg, field=aqua_var_gridded,
                  varname='CERES LW TOA flux - upwards', varunits=r'W m$^{-2}$',
@@ -184,6 +181,7 @@ ceres.global_map(lon=lon_syn1deg, lat=lat_syn1deg, field=aqua_var_gridded,
                  cmap=cmap, cmap_lims=(150, 350), ti_str=r'Aqua CERES FM3 CRS1deg$_{\beta}$ ' + date_str)
 
 
+# ========================================================
 # # CRS1deg-beta
 # plt.imshow(terra_var_gridded)
 # plt.colorbar()

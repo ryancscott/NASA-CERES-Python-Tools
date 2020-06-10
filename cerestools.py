@@ -878,7 +878,7 @@ def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
             lat[i] = np.nan
             lon[i] = np.nan
 
-    # ignore/remove NaNs
+    # ignore and remove NaNs
     bad_indices = np.isnan(var)
     good_indices = ~bad_indices
     lat = lat[good_indices]
@@ -1100,9 +1100,9 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     print(gridded_stat.shape)
 
     # quick & dirty plot of the result
-    plt.pcolor(gridded_stat)
-    plt.colorbar()
-    plt.show()
+    #plt.pcolor(gridded_stat)
+    #plt.colorbar()
+    #plt.show()
 
     # would be nice to write the result to a netCDF or HDF file...
     # especially in cases where this takes a long time to run...
