@@ -858,7 +858,8 @@ def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
     """
     ----------------------------------------------------------------------------
     This function extracts daytime footprints from a time series of CERES FOVs
-    using a solar zenith angle cut-off value.
+    using a solar zenith angle cut-off value. Nighttime values more than the
+    threshold (e.g., 90 degrees) are ignored.
     ----------------------------------------------------------------------------
     :param lat: FOV latitudes                   [float]
     :param lon: FOV longitudes                  [float]
@@ -873,6 +874,45 @@ def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
     # if footprint SZA > cutoff value, ignore
     for i in range(len(sza)):
         if sza[i] >= sza_cutoff:
+            sza[i] = np.nan
+            var[i] = np.nan
+            lat[i] = np.nan
+            lon[i] = np.nan
+
+    # ignore and remove NaNs
+    bad_indices = np.isnan(var)
+    good_indices = ~bad_indices
+    lat = lat[good_indices]
+    lon = lon[good_indices]
+    sza = sza[good_indices]
+    var = var[good_indices]
+
+    return lat, lon, var, sza
+
+
+# ==============================================================================
+
+
+def swath_nighttime_only(lat, lon, var, sza, sza_cutoff):
+    """
+    ----------------------------------------------------------------------------
+    This function extracts nighttime footprints from a time series of CERES FOVs
+    using a solar zenith angle cut-off value. Daytime values less than the
+    threshold (e.g., 90 degrees) are ignored.
+    ----------------------------------------------------------------------------
+    :param lat: FOV latitudes                   [float]
+    :param lon: FOV longitudes                  [float]
+    :param var: variable under consideration    [float]
+    :param sza: FOV solar zenith angle          [float]
+    :param sza_cutoff: SZA cut-off value        [float]
+    :return:
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    # if footprint SZA < cutoff value, ignore
+    for i in range(len(sza)):
+        if sza[i] <= sza_cutoff:
             sza[i] = np.nan
             var[i] = np.nan
             lat[i] = np.nan
@@ -939,8 +979,9 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
                                 date_str, platform, day_only, sza):
     """
     ----------------------------------------------------------------------------
-    This function creates a scatterplot and a histogram of the difference between
-    two fields. It also yields basic statistics about the data.
+    This function creates a histogram of the difference between two CERES L2
+    footprint-level swath fields and also plots a scatterplot of the data. It
+    also yields basic descriptive statistics about the data.
     ----------------------------------------------------------------------------
     :param field2:                                   [float]
     :param field1:                                   [float]
@@ -948,8 +989,8 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
     :param lev_name: name of vertical level          [string]
     :param date_str: time/data information           [string]
     :param platform: satellite and flight model      [string]
-    :param day_only: day only?                       [      ]
-    :param sza: FOV solar zenith angle
+    :param day_only: day only?                       [boolean]
+    :param sza: FOV solar zenith angle               [float]
     ----------------------------------------------------------------------------
     :return: plot of histogram and scatterplot
     """

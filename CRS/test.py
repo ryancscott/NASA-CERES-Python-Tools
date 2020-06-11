@@ -409,8 +409,12 @@ for k in range(24):
     plt.show()
 
 
-diff = terra_only_mask*var_syn1deg - terra_only_mask*terra_var_gridded
-diff[terra_aqua_mask == 2] = np.nan
+aqua_diff = aqua_only_mask*var_syn1deg - aqua_only_mask*aqua_var_gridded
+
+terra_diff = terra_only_mask*var_syn1deg - terra_only_mask*terra_var_gridded
+terra_diff[terra_aqua_mask == 2] = np.nan
+
+
 
 
 # for k in range(24):

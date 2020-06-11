@@ -73,18 +73,32 @@ for k in range(24):
 
     terra_lat_all, terra_lon_all, _, _, _, terra_sza_all = ceres.read_crs_geolocation_dev(file_path=terra_crs_file)
     terra_var_all, _, _, _ = ceres.read_crs_var_dev(file_path=terra_crs_file,
-                                                    var_name='Longwave flux - upward - total sky',
+                                                    var_name='Shortwave flux - upward - total sky',
                                                     lev_arg=0,
                                                     fill=True)
 
     aqua_lat_all, aqua_lon_all, _, _, _, aqua_sza_all = ceres.read_crs_geolocation_dev(file_path=aqua_crs_file)
     aqua_var_all, _, _, _ = ceres.read_crs_var_dev(file_path=aqua_crs_file,
-                                                   var_name='Longwave flux - upward - total sky',
+                                                   var_name='Shortwave flux - upward - total sky',
                                                    lev_arg=0,
                                                    fill=True)
 
     terra_lon_all = ceres.swath_lon_360_to_180(terra_lon_all)
     aqua_lon_all = ceres.swath_lon_360_to_180(aqua_lon_all)
+
+    terra_lat_all, terra_lon_all, terra_var_all, terra_sza_all = \
+        ceres.swath_daytime_only(lat=terra_lat_all,
+                                   lon=terra_lon_all,
+                                   var=terra_var_all,
+                                   sza=terra_sza_all,
+                                   sza_cutoff=90)
+
+    aqua_lat_all, aqua_lon_all, aqua_var_all, aqua_sza_all = \
+        ceres.swath_daytime_only(lat=aqua_lat_all,
+                                   lon=aqua_lon_all,
+                                   var=aqua_var_all,
+                                   sza=aqua_sza_all,
+                                   sza_cutoff=90)
 
     terra_var_gridded[k, :, :] = ceres.grid_to_1x1_deg_equal_angle(terra_lat_all, terra_lon_all, terra_var_all, False)
     aqua_var_gridded[k, :, :] = ceres.grid_to_1x1_deg_equal_angle(aqua_lat_all, aqua_lon_all, aqua_var_all, False)
@@ -102,79 +116,146 @@ for k in range(24):
 
 
 terra_only_mask = terra_mask - both_mask
-
+aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
 
 
-for k in range(24):
+# for k in range(24):
+#
+#     if k < 10:
+#         j = '0' + str(k)
+#     elif k >= 10:
+#         j = str(k)
+#
+#     fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(11, 7))
+#     for i, ax in enumerate(axes.flat):
+#         if i == 0:
+#             im = ax.imshow(terra_mask[k, :, :], vmin=0, vmax=1)
+#             ax.set_title(r'CRS1deg$_{\beta}$ Terra FM1, 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 3:
+#             im = ax.imshow(num_sw_obs[k, :, :], vmin=0, vmax=1)
+#             ax.set_title('SYN1deg Terra & Aqua SW mask, 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 2:
+#             im = ax.imshow(aqua_mask[k, :, :], vmin=0, vmax=1)
+#             ax.set_title(r'CRS1deg$_{\beta}$ Aqua FM3, 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 5:
+#             im = ax.imshow(num_lw_obs[k, :, :], vmin=0, vmax=1)
+#             ax.set_title('SYN1deg Terra & Aqua LW mask, 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 4:
+#             im = ax.imshow(terra_aqua_mask[k, :, :], vmin=0, vmax=2)
+#             ax.set_title(r'CRS1deg$_{\beta}$ Terra & Aqua, 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 1:
+#             im = ax.imshow(aqua_only_mask[k, :, :], vmin=0, vmax=1)
+#             ax.set_title(r'CRS1deg$_{\beta}$ Aqua - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#
+#     fig.subplots_adjust(right=0.8)
+#     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+#     fig.colorbar(im, cax=cbar_ax)
+#
+#     plt.show()
 
-    if k < 10:
-        j = '0' + str(k)
-    elif k >= 10:
-        j = str(k)
 
-    fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(11, 7.5))
-    for i, ax in enumerate(axes.flat):
-        if i == 3:
-            im = ax.imshow(num_sw_obs[k, :, :], vmin=0, vmax=1)
-            ax.set_title('SYN1deg Terra/Aqua SW mask, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 1:
-            im = ax.imshow(num_lw_obs[k, :, :], vmin=0, vmax=1)
-            ax.set_title('SYN1deg Terra/Aqua LW mask, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 2:
-            im = ax.imshow(terra_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title('Terra FM1, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 0:
-            im = ax.imshow(aqua_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title('Aqua FM3, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 5:
-            im = ax.imshow(terra_aqua_mask[k, :, :], vmin=0, vmax=2)
-            ax.set_title('Terra + Aqua, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 4:
-            im = ax.imshow(terra_only_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title(r'Terra - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig.colorbar(im, cax=cbar_ax)
-
-    plt.show()
-
-
-diff = terra_only_mask*var_syn1deg - terra_only_mask*terra_var_gridded
-diff[terra_aqua_mask == 2] = np.nan
-
+# take the difference CRS1deg_beta minus SYN1deg hour-by-hour
+aqua_diff = aqua_only_mask*aqua_var_gridded - aqua_only_mask*var_syn1deg
+terra_diff = terra_only_mask*terra_var_gridded - terra_only_mask*var_syn1deg
+aqua_diff[terra_aqua_mask == 2] = np.nan
+terra_diff[terra_aqua_mask == 2] = np.nan
 
 # for k in range(24):
-#     plt.imshow(diff[k, :, :])
-#     plt.colorbar()
-#     plt.clim(vmin=-30, vmax=30)
+#
+#     if k < 10:
+#         j = '0' + str(k)
+#     elif k >= 10:
+#         j = str(k)
+#
+#     fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 7))
+#     for i, ax in enumerate(axes.flat):
+#         if i == 0:
+#             im = ax.imshow(terra_diff[k, :, :], vmin=-30, vmax=30)
+#             ax.set_title(r'Terra Only CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+#                          r'Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#         elif i == 1:
+#             im = ax.imshow(aqua_diff[k, :, :], vmin=-30, vmax=30)
+#             ax.set_title(r'Aqua Only CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+#                          r'Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
+#             ax.set_xticklabels([])
+#             ax.set_yticklabels([])
+#             ax.set_xticks([])
+#             ax.set_yticks([])
+#
+#     fig.subplots_adjust(right=0.8)
+#     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+#     fig.colorbar(im, cax=cbar_ax)
+#
 #     plt.show()
+
+terra_mean_diff = np.nanmean(terra_diff, axis=0)
+aqua_mean_diff = np.nanmean(aqua_diff, axis=0)
+
+
+print(terra_diff[0, 0:100, 0:100])
+
+
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 7))
+for i, ax in enumerate(axes.flat):
+    if i == 0:
+        im = ax.imshow(terra_mean_diff, vmin=-30, vmax=30)
+        ax.set_title(r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+                     r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h')
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_xticks([])
+        ax.set_yticks([])
+    elif i == 1:
+        im = ax.imshow(aqua_mean_diff, vmin=-30, vmax=30)
+        ax.set_title(r'Mean Daytime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+                     r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h')
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+fig.subplots_adjust(right=0.8)
+cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+fig.colorbar(im, cax=cbar_ax)
+
+plt.show()
+
+
+
+
+
+
+
+
 
 
 
