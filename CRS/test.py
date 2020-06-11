@@ -247,6 +247,7 @@ import numpy as np
 #     var = var[good_indices]
 #
 #     return lat, lon, var, sza
+
 path2 = '/Users/rcscott2/Desktop/CERES/SYN1deg/'
 file2 = 'CER_SYN1deg-1Hour_Terra-Aqua-MODIS_Edition4A_407406.20190101'
 file_path2 = path2 + file2
@@ -358,47 +359,48 @@ for k in range(24):
     fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(11, 7.5))
     for i, ax in enumerate(axes.flat):
         if i == 0:
-            im = ax.imshow(terra_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title('Terra FM1, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 1:
-            im = ax.imshow(aqua_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title('Aqua FM3, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 2:
-            im = ax.imshow(terra_aqua_mask[k, :, :], vmin=0, vmax=2)
-            ax.set_title('Terra + Aqua, 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 3:
-            im = ax.imshow(terra_only_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title(r'Terra - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_xticks([])
-            ax.set_yticks([])
-        elif i == 4:
             im = ax.imshow(num_sw_obs[k, :, :], vmin=0, vmax=1)
             ax.set_title('SYN1deg Terra/Aqua SW mask, 1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
             ax.set_yticks([])
-        elif i == 5:
+        elif i == 1:
             im = ax.imshow(num_lw_obs[k, :, :], vmin=0, vmax=1)
             ax.set_title('SYN1deg Terra/Aqua LW mask, 1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
             ax.set_yticks([])
+        elif i == 2:
+            im = ax.imshow(terra_mask[k, :, :], vmin=0, vmax=1)
+            ax.set_title('Terra FM1, 1-1-2019:' + str(j) + 'h')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_xticks([])
+            ax.set_yticks([])
+        elif i == 3:
+            im = ax.imshow(aqua_mask[k, :, :], vmin=0, vmax=1)
+            ax.set_title('Aqua FM3, 1-1-2019:' + str(j) + 'h')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_xticks([])
+            ax.set_yticks([])
+        elif i == 4:
+            im = ax.imshow(terra_aqua_mask[k, :, :], vmin=0, vmax=2)
+            ax.set_title('Terra + Aqua, 1-1-2019:' + str(j) + 'h')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_xticks([])
+            ax.set_yticks([])
+        elif i == 5:
+            im = ax.imshow(terra_only_mask[k, :, :], vmin=0, vmax=1)
+            ax.set_title(r'Terra - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_xticks([])
+            ax.set_yticks([])
+
 
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
@@ -411,9 +413,9 @@ diff = terra_only_mask*var_syn1deg - terra_only_mask*terra_var_gridded
 diff[terra_aqua_mask == 2] = np.nan
 
 
-for k in range(24):
-    plt.imshow(diff[k, :, :])
-    plt.colorbar()
-    plt.clim(vmin=-30, vmax=30)
-    plt.show()
+# for k in range(24):
+#     plt.imshow(diff[k, :, :])
+#     plt.colorbar()
+#     plt.clim(vmin=-30, vmax=30)
+#     plt.show()
 
