@@ -11,7 +11,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='init_all_toa_lw_up',
+                                           var_name='init_all_toa_sw_up',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -227,7 +227,7 @@ print(terra_diff[0, 0:100, 0:100])
 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6, 7))
 for i, ax in enumerate(axes.flat):
     if i == 0:
-        im = ax.imshow(terra_mean_diff, vmin=-30, vmax=30)
+        im = ax.imshow(terra_mean_diff, vmin=-100, vmax=100)
         ax.set_title(r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
                      r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h')
         ax.set_xticklabels([])
@@ -235,7 +235,7 @@ for i, ax in enumerate(axes.flat):
         ax.set_xticks([])
         ax.set_yticks([])
     elif i == 1:
-        im = ax.imshow(aqua_mean_diff, vmin=-30, vmax=30)
+        im = ax.imshow(aqua_mean_diff, vmin=-100, vmax=100)
         ax.set_title(r'Mean Daytime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
                      r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h')
         ax.set_xticklabels([])
@@ -250,11 +250,97 @@ fig.colorbar(im, cax=cbar_ax)
 plt.show()
 
 
+field = np.stack((terra_mean_diff, aqua_mean_diff), axis=2)
+title_str = [r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+             r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
+             r'Mean Daytime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+             r'Reflected SW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
+             ]
 
 
+def plot_gridded_fields(nrows, ncols, cen_lon,
+                        date_str, title_str,
+                        varname, levname, varunits,
+                        lon, lat, input):
+    """
+    ----------------------------------------------------------------------------
+    This function plots a swath of footprint-level data
+    FLASHFlux, SSF, or CRS
+    ----------------------------------------------------------------------------
+    :param lon: FOV longitude
+    :param lat: FOV latitude
+    :param field: variable
+    :param varname: variable name
+    :param levname: level name
+    :param varunits: variable units
+    :param nrows: number of rows
+    :param ncols: number of columns
+    :param cen_lon: central longitude
+    :param cmap: colormap
+    :param cmap_lims: colormap limits
+    :param date: date info for nightshade
+    :param nightshade: whether to use nighshade feature    [boolean]
+    :param date_str: date string
+    :param title_str: title string
+    ----------------------------------------------------------------------------
+    :return: plot of the data
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy.feature
+    from mpl_toolkits.axes_grid1 import AxesGrid
+    from cartopy.mpl.geoaxes import GeoAxes
+    from cartopy.feature.nightshade import Nightshade
+
+    # Map projection
+    projection = ccrs.PlateCarree(central_longitude=cen_lon)
+
+    # Axis class
+    axes_class = (GeoAxes, dict(map_projection=projection))
+
+    # Create figure
+    fig = plt.figure(figsize=(10, 8))
+    axgr = AxesGrid(fig, 111, axes_class=axes_class,
+                    nrows_ncols=(nrows, ncols),
+                    axes_pad=(0.4, 0.4),
+                    share_all=True,
+                    cbar_location='right',
+                    cbar_mode='each',
+                    cbar_pad=0.1,
+                    cbar_size='5%',
+                    label_mode=1)
+
+    # Loop over axes
+    for i, ax in enumerate(axgr):
+        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
+                       edgecolor='darkgrey')
+        ax.gridlines(color='grey', linestyle='--')
+        ax.set_extent([-180, 180, -90, 90], projection)
+        ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
+                va='bottom', ha='center',
+                rotation='horizontal', rotation_mode='anchor',
+                transform=ax.transAxes, fontsize=10)
+
+    # To use a different color bar range each time use a tuple of tuples
+    #        ((0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120))
+    limits = (-100, 100)
+    for i in range((nrows * ncols)):
+        im = axgr[i].pcolor(lon, lat, field[:, :, i],
+                            vmin=limits[0], vmax=limits[1])
+        axgr.cbar_axes[i].colorbar(im)
+        axgr[i].set_title(title_str[i])
+
+    #plt.tight_layout(pad=3.0)
+    plt.show()
+    return
 
 
-
+plot_gridded_fields(nrows=2, ncols=1, cen_lon=0,
+                    date_str='', title_str=title_str,
+                    varname='', levname='', varunits='',
+                    lon=lon_syn1deg, lat=lat_syn1deg,
+                    input=field)
 
 
 
