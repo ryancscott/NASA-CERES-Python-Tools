@@ -50,6 +50,7 @@
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram of swath diff & scatter plot
 # grid_to_1x1_degree          <- bin FOVs in 1x1 grid boxes & compute statistics
+# plot_gridded_fields         <- plot gridded fields, replaces global_map
 # =====================
 #       LEVEL 3
 # =====================
@@ -364,7 +365,7 @@ def read_crs_var(file_path, var_name, lev_arg, fill):
 
     # Select p level using integer index: lev_arg
     switch2 = {
-        -1: ' ',    # not associated with a particular level per se
+        -1: ' ',    # not associated with a particular level
         0: 'TOA',
         1: '70 mb',
         2: '200 mb',
@@ -476,6 +477,7 @@ def read_day_of_ssf_files(path, file_struc, variable, index, fill):
     :param path: path to directory containing data files
     :param file_struc: file structure (without the hour portion at the end)
     :param variable: variable to be read from file
+    :param index:
     :param fill: option to replace fill values as NaN
     :return: variable, lat, lon, sza
     ----------------------------------------------------------------------------
@@ -493,7 +495,7 @@ def read_day_of_ssf_files(path, file_struc, variable, index, fill):
     lon_all = np.empty([])
     var_all = np.empty([])
 
-    for k in range(23):        # Should be 24 for CERES SSF, 23 for FLASHFlux since
+    for k in range(24):        # Should be 24 for CERES SSF, 23 for FLASHFlux since
         if k < 10:             # the final swath length differs between FF and CERES
             k = '0' + str(k)   # Still need to look into why... and fix?
 
@@ -953,8 +955,8 @@ def swath_difference(field2, field1, day_only, sza):
     difference = field2 - field1
 
     # a footprint might be good in one but bad in another...
-    #difference[difference == max(difference)] = np.nan
-    #difference[difference == min(difference)] = np.nan
+    difference[difference == max(difference)] = np.nan
+    difference[difference == min(difference)] = np.nan
 
     # field2.shape[0] = field1.shape[0]
     if day_only is True:
@@ -1074,7 +1076,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
     plt.show()
     return
 
-# ========================================================================
+# =============================================================================
 
 
 def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
@@ -1149,6 +1151,86 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     # especially in cases where this takes a long time to run...
 
     return gridded_stat
+
+
+# =============================================================================
+
+
+def plot_gridded_fields(nrows, ncols, cen_lon,
+                        date_str, title_str,
+                        cmap, cmap_lims,
+                        varname, levname, varunits,
+                        lon, lat, field):
+    """
+    ----------------------------------------------------------------------------
+    This function provides a framework for plotting multiple different gridded
+    fields.
+    ----------------------------------------------------------------------------
+    :param nrows: number of rows
+    :param ncols: number of columns
+    :param cen_lon: central longitude
+    :param date_str: date string
+    :param title_str: title string
+    :param cmap: colormap
+    :param cmap_lims: colormap limits
+    :param varname: variable name
+    :param levname: level name
+    :param varunits: variable units
+    :param lon: longitude
+    :param lat: latitude
+    :param field: variable to plot
+    ----------------------------------------------------------------------------
+    :return: plot of the data
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy.feature
+    from mpl_toolkits.axes_grid1 import AxesGrid
+    from cartopy.mpl.geoaxes import GeoAxes
+    from cartopy.feature.nightshade import Nightshade
+
+    # Map projection
+    projection = ccrs.Robinson(central_longitude=cen_lon)
+
+    # Axis class
+    axes_class = (GeoAxes, dict(map_projection=projection))
+
+    # Create figure
+    fig = plt.figure(figsize=(10, 8))
+    axgr = AxesGrid(fig, 111, axes_class=axes_class,
+                    nrows_ncols=(nrows, ncols),
+                    axes_pad=(0.4, 0.6),
+                    share_all=True,
+                    cbar_location='right',
+                    cbar_mode='each',
+                    cbar_pad=0.1,
+                    cbar_size='5%',
+                    label_mode=1)
+
+    # Loop over axes
+    for i, ax in enumerate(axgr):
+        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
+                       edgecolor='darkgrey')
+        ax.gridlines(color='grey', linestyle='--')
+        #ax.set_extent([-180, 180, -90, 90], projection)
+        ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
+                va='bottom', ha='center',
+                rotation='horizontal', rotation_mode='anchor',
+                transform=ax.transAxes, fontsize=10)
+
+    # To use a different color bar range each time use a tuple of tuples
+    #        = ((0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120))
+    # limits = (-30, 30)
+    limits = cmap_lims
+    for i in range((nrows * ncols)):
+        im = axgr[i].pcolor(lon, lat, field[:, :, i], transform=ccrs.PlateCarree(),
+                            vmin=limits[i][0], vmax=limits[i][1], cmap=cmap)
+        axgr.cbar_axes[i].colorbar(im)
+        axgr[i].set_title(title_str[i], fontsize=10)
+
+    plt.show()
+    return
 
 
 # ========================================================================
@@ -1470,41 +1552,47 @@ def compute_regional_averages(field, latitude, weights):
     """
     import numpy as np
 
-    # Global mean climatological total cloud fraction
-    global_avg = np.average(field, weights=weights)
+    # Global mean
+    global_avg = np.ma.average(np.ma.masked_array(field, np.isnan(field)), weights=weights)
     print('\n', 'Global average:', global_avg, '\n')
 
-    # 60Sto90S mean climatological total cloud fraction
-    sh60to90_avg = np.average(field[0:30, :], weights=weights[0:30, :])
+    # 60Sto90S mean
+    sh60to90_avg = np.ma.average(np.ma.masked_array(field[0:30, :], np.isnan(field[0:30, :])),
+                                 weights=weights[0:30, :])
     print('Antarctic (60S-90S) average:', sh60to90_avg)
     print('Latitude range:', latitude[0:30], '\n')
 
-    # SH mid-latitude climatological total cloud fraction
-    sh30to60_avg = np.average(field[30:60, :], weights=weights[30:60, :])
+    # SH mid-latitude
+    sh30to60_avg = np.ma.average(np.ma.masked_array(field[30:60, :], np.isnan(field[30:60, :])),
+                                 weights=weights[30:60, :])
     print('S mid-latitude (30S-60S) average:', sh30to60_avg)
     print('Latitude range:', latitude[30:60], '\n')
 
-    # SH tropical mean climatology
-    sh0to30_avg = np.average(field[60:90, :], weights=weights[60:90, :])
+    # SH tropical
+    sh0to30_avg = np.ma.average(np.ma.masked_array(field[60:90, :], np.isnan(field[60:90, :])),
+                                weights=weights[60:90, :])
     print('S tropical (30S-0) average:', sh0to30_avg)
     print('Latitude range:', latitude[60:90], '\n')
 
-    # NH tropical mean climatological total cloud fraction
-    nh0to30_avg = np.average(field[90:120, :], weights=weights[90:120, :])
+    # NH tropical mean
+    nh0to30_avg = np.ma.average(np.ma.masked_array(field[90:120, :], np.isnan(field[90:120, :])),
+                                weights=weights[90:120, :])
     print('N tropical (0-30N) average:', nh0to30_avg)
     print('Latitude range:', latitude[90:120], '\n')
 
-    # NH tropical mean climatological total cloud fraction
-    nh30to60_avg = np.average(field[120:150, :], weights=weights[120:150, :])
+    # NH mid-latitude
+    nh30to60_avg = np.ma.average(np.ma.masked_array(field[120:150, :], np.isnan(field[120:150, :])),
+                                 weights=weights[120:150, :])
     print('N mid-latitude (30N-60N) average:', nh30to60_avg)
     print('Latitude range:', latitude[120:150], '\n')
 
     # Arctic mean climatological total cloud fraction
-    nh60to90_avg = np.average(field[150:180, :], weights=weights[150:180, :])
+    nh60to90_avg = np.ma.average(np.ma.masked_array(field[150:180, :], np.isnan(field[150:180, :])),
+                                 weights=weights[150:180, :])
     print('Arctic 60N-90N average:', nh60to90_avg)
     print('Latitude range:', latitude[150:180], '\n')
 
-    return sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg
+    return global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg
 
 
 # ========================================================================
@@ -1759,8 +1847,8 @@ def global_map(lon, lat, field,
     # Plot figure
     axgr = AxesGrid(fig, 111, axes_class=axes_class,
                     nrows_ncols=(nrows, ncols),
-                    axes_pad=(0.4,0.4),
-                    share_all = True,
+                    axes_pad=(0.4, 0.4),
+                    share_all=True,
                     cbar_location='right',
                     cbar_mode='each',
                     cbar_pad=0.1,
@@ -1769,7 +1857,6 @@ def global_map(lon, lat, field,
 
     for i, ax in enumerate(axgr):
         ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none', edgecolor='grey')
-        # ax.add_feature(cartopy.feature.GSHHSFeature('low',edgecolor='none'), zorder=1, facecolor='black')
         ax.gridlines(color='black', linestyle=':')
         ax.set_title(ti_str)
         #ax.set_extent([-180, 180, -60, 60], ccrs.PlateCarree())
