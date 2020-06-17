@@ -209,7 +209,7 @@ terra_diff = terra_only_mask*terra_var_gridded - terra_only_mask*var_syn1deg
 aqua_diff[terra_aqua_mask == 2] = np.nan
 terra_diff[terra_aqua_mask == 2] = np.nan
 
-
+#
 fig, (ax1, ax2) = plt.subplots(2, 1)
 ax1.hist(np.reshape(terra_diff, 24*180*360), bins=200, align='mid', rwidth=1)
 ax2.hist(np.reshape(aqua_diff, 24*180*360), bins=200, align='mid', rwidth=1)
