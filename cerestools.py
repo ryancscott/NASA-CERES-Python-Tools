@@ -1004,7 +1004,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
 
     mean_diff = np.nanmean(swath_diff)             # mean of the difference, i.e., bias
     sigma_diff = np.nanstd(swath_diff)             # standard deviation of the difference
-    rms_diff = np.sqrt(np.nanmean(swath_diff**2))  # RMS difference
+    rms_diff = np.sqrt(np.nanmean(swath_diff**2))  # RMS difference = RMSD
 
     # number of FOVs compared
     print("Number of FOVs in swath: ", len(swath_diff))
@@ -1059,7 +1059,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
     # scatter plot
     axs[1].plot(range(2000), range(2000), color='black', zorder=0)
     axs[1].scatter(field1, field2, s=0.05)
-    #axs[1].hist2d(field1, field2, bins=50, cmap='ocean_r')
+    # axs[1].hist2d(field1, field2, bins=50, cmap='ocean_r')
     axs[1].set(xlim=(0, max), ylim=(0, max))
     axs[1].grid()
     axs[1].set_axisbelow("True")
@@ -1100,7 +1100,7 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     import matplotlib.pyplot as plt
     from scipy import stats
 
-    # consider adding as parameters of the function...
+    # consider generalizing and adding bins as parameters of the function?
     lat_bins = np.arange(-90, 91)    # lat: -90 to 90 deg
 
     if lon_360 is True:
@@ -1139,16 +1139,16 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     toc = time.time()
     print(toc - tic, 'seconds elapsed during grid_to_1x1_deg_equal_angle\n')
 
-    print("Shape of 1 deg x 1 deg gridded field:")
+    print("Shape of 1 x 1 gridded field:")
     print(gridded_stat.shape)
 
     # quick & dirty plot of the result
-    #plt.pcolor(gridded_stat)
-    #plt.colorbar()
-    #plt.show()
+    # plt.pcolor(gridded_stat)
+    # plt.colorbar()
+    # plt.show()
 
-    # would be nice to write the result to a netCDF or HDF file...
-    # especially in cases where this takes a long time to run...
+    # might be nice to write the result to a netCDF or HDF file
+    # in cases where this takes a long time to run...
 
     return gridded_stat
 

@@ -1,10 +1,16 @@
+# ==========================================================================
+# Author: Ryan C. Scott, ryan.c.scott@nasa.gov
+# This script compares CRS1deg_beta to SYN1deg-Hour at the Terra/Aqua
+# overpass time.
+# ==========================================================================
 
 import numpy as np
 import cerestools as ceres
 import matplotlib.pyplot as plt
-from palettable.cmocean.sequential import Thermal_20
+
 from palettable.cmocean.diverging import Balance_20
-from palettable.scientific.sequential import LaJolla_20_r
+# from palettable.scientific.sequential import LaJolla_20_r
+# from palettable.cmocean.sequential import Thermal_20
 
 
 path2 = '/Users/rcscott2/Desktop/CERES/SYN1deg/'
@@ -13,8 +19,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='init_all_toa_lw_up',
-                                           #var_name='obs_clr_toa_sw',
+                                           var_name='obs_all_toa_lw',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -51,7 +56,6 @@ print("SYN1deg GEO LW obs shape: ", num_geo_lw_obs.shape)
 terra_var_gridded = np.zeros([24, 180, 360])
 aqua_var_gridded = np.zeros([24, 180, 360])
 
-
 terra_mask = np.zeros([24, 180, 360])
 aqua_mask = np.zeros([24, 180, 360])
 both_mask = np.zeros([24, 180, 360])
@@ -77,18 +81,20 @@ for k in range(24):
     terra_lat_all, terra_lon_all, _, _, _, terra_sza_all = \
         ceres.read_crs_geolocation_dev(file_path=terra_crs_file)
 
-    terra_var_all, _, _, _ = ceres.read_crs_var_dev(file_path=terra_crs_file,
-                                                    var_name='Longwave flux - upward - total sky',
-                                                    lev_arg=0,
-                                                    fill=True)
+    terra_var_all, _, _, _ = \
+        ceres.read_crs_var_dev(file_path=terra_crs_file,
+                               var_name='Longwave flux - upward - total sky',
+                               lev_arg=0,
+                               fill=True)
 
     aqua_lat_all, aqua_lon_all, _, _, _, aqua_sza_all = \
         ceres.read_crs_geolocation_dev(file_path=aqua_crs_file)
 
-    aqua_var_all, _, _, _ = ceres.read_crs_var_dev(file_path=aqua_crs_file,
-                                                   var_name='Longwave flux - upward - total sky',
-                                                   lev_arg=0,
-                                                   fill=True)
+    aqua_var_all, _, _, _ = \
+        ceres.read_crs_var_dev(file_path=aqua_crs_file,
+                               var_name='Longwave flux - upward - total sky',
+                               lev_arg=0,
+                               fill=True)
 
     terra_lon_all = ceres.swath_lon_360_to_180(terra_lon_all)
     aqua_lon_all = ceres.swath_lon_360_to_180(aqua_lon_all)
@@ -107,17 +113,18 @@ for k in range(24):
                                  sza=aqua_sza_all,
                                  sza_cutoff=90)
 
-    terra_var_gridded[k, :, :] = ceres.grid_to_1x1_deg_equal_angle(terra_lat_all,
-                                                                   terra_lon_all,
-                                                                   terra_var_all,
-                                                                   lon_360=False)
+    terra_var_gridded[k, :, :] = \
+        ceres.grid_to_1x1_deg_equal_angle(lat_data=terra_lat_all,
+                                          lon_data=terra_lon_all,
+                                          variable=terra_var_all,
+                                          lon_360=False)
 
-    aqua_var_gridded[k, :, :] = ceres.grid_to_1x1_deg_equal_angle(aqua_lat_all,
-                                                                  aqua_lon_all,
-                                                                  aqua_var_all,
-                                                                  lon_360=False)
-
-    print('...', k)
+    aqua_var_gridded[k, :, :] = \
+        ceres.grid_to_1x1_deg_equal_angle(lat_data=aqua_lat_all,
+                                          lon_data=aqua_lon_all,
+                                          variable=aqua_var_all,
+                                          lon_360=False)
+    print('...', k, ' ...')
 
     for i in range(180):
         for j in range(360):
@@ -129,6 +136,7 @@ for k in range(24):
                 both_mask[k, i, j] = 1
 
 
+# isolate grid boxes observed by one satellite
 terra_only_mask = terra_mask - both_mask
 aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
@@ -196,9 +204,16 @@ for k in range(0):
 # take the difference CRS1deg_beta minus SYN1deg hour-by-hour
 aqua_diff = aqua_only_mask*aqua_var_gridded - aqua_only_mask*var_syn1deg
 terra_diff = terra_only_mask*terra_var_gridded - terra_only_mask*var_syn1deg
+
 # ignore grid boxes observed by both Terra and Aqua
 aqua_diff[terra_aqua_mask == 2] = np.nan
 terra_diff[terra_aqua_mask == 2] = np.nan
+
+
+fig, (ax1, ax2) = plt.subplots(2, 1)
+ax1.hist(np.reshape(terra_diff, 24*180*360), bins=200, align='mid', rwidth=1)
+ax2.hist(np.reshape(aqua_diff, 24*180*360), bins=200, align='mid', rwidth=1)
+plt.show()
 
 
 for k in range(0):

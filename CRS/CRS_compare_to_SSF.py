@@ -1,4 +1,7 @@
-
+# ==========================================================================
+# Author: Ryan C. Scott, ryan.c.scott@nasa.gov
+# This script compares CERES footprint-level quantities (CRS, SSF, etc.)
+# ==========================================================================
 
 import cerestools as ceres
 import numpy as np
@@ -17,15 +20,15 @@ from palettable.scientific.sequential import Devon_20
 # colorbrewer
 from palettable.colorbrewer.sequential import BuPu_9_r
 
-# ===============================================================================================
+# ==========================================================================
 #
-# READ A FULL DAY OF DATA
+# READ AN ENTIRE DAY OF DATA
 #
-# ===============================================================================================
+# ==========================================================================
 #
-# COMPARE CRS4 to CERES SSF
+# COMPARE CRS4 to SSF
 #
-# ===============================================================================================
+# ==========================================================================
 
 
 # var_all2, lon_all2, lat_all2, sza_all2 = \
@@ -72,11 +75,11 @@ from palettable.colorbrewer.sequential import BuPu_9_r
 #                                   day_only=True, sza=sza_all2)
 
 
-# ===============================================================================================
+# ==========================================================================
 #
 # COMPARE CRS4 to CRS4 - i.e., fluxes for different sky conditions
 #
-# ===============================================================================================
+# ==========================================================================
 
 var_all3, lon_all3, lat_all3, sza_all3 = ceres.read_day_of_crs_files(
                                path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
@@ -120,11 +123,11 @@ ceres.plot_swath(lon=lon_all3, lat=lat_all3, field=aod_all, nrows=1, ncols=1, ce
                  cmap=aod_colormap, cmap_lims=(0, 1), date='20190103', date_str='01/03/2019:00-23h',
                  nightshade=False, title_str='Terra FM1 CERES CRS Ed4')
 
-# ===============================================================================================
+# ==========================================================================
 #
 # READ A FULL MONTH OF DATA
 #
-# ===============================================================================================
+# ==========================================================================
 #
 # var_all2, lon_all2, lat_all2, sza_all2 = \
 #     read_full_day_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-01-2019/',
