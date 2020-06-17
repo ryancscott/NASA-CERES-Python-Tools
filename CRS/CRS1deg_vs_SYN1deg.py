@@ -117,7 +117,7 @@ for k in range(24):
                                                                   aqua_var_all,
                                                                   lon_360=False)
 
-    print(k)
+    print('...', k)
 
     for i in range(180):
         for j in range(360):
