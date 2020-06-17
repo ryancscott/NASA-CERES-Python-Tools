@@ -1,4 +1,4 @@
-# Python-CERES-tools
+# NASA-CERES-Python-Tools
 NASA CERES Python Tools
 
 Author: Ryan C. Scott
