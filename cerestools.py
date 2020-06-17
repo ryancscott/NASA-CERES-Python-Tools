@@ -50,7 +50,7 @@
 # plot_swath                  <- plot SSF, CRS swath
 # swath_histogram_scatterplot <- produce histogram of swath diff & scatter plot
 # grid_to_1x1_degree          <- bin FOVs in 1x1 grid boxes & compute statistics
-# plot_gridded_fields         <- plot gridded fields, replaces global_map
+# plot_gridded_fields         <- plot gridded fields, will replace global_map
 # =====================
 #       LEVEL 3
 # =====================
