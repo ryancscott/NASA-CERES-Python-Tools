@@ -38,91 +38,151 @@ def grid_to_1x1_deg_ceres_nested(lat_data, lon_data, variable, lon_360=True):
     import matplotlib.pyplot as plt
     from scipy import stats
 
+    lat_bins = np.arange(-90, 91)  # lat: -90 to 90 deg
+
     # consider generalizing and adding bins as parameters of the function?
     lat_bins = np.arange(-90, 91)    # lat: -90 to 90 deg
 
-    # ZONE 1
-    # if lon_360 is True:
-    #     lon_bins = np.arange(0, 361)     # lon: 0 to 360
-    # elif lon_360 is False:
-    #     lon_bins = np.arange(-180, 181)  # lon: -180 to 180
+    lon_ext = [1, 2, 4, 8]
 
-    # zone 1 : equatorward of 45 - set to np.nan
-    # variable[abs(lat_data) > 45] = np.nan
+    # gridded1 = np.empty([180, 360])
+    # gridded2 = np.empty([180, 180])
+    # gridded3 = np.empty([180, 90])
+    # gridded4 = np.empty([180, 45])
+    for el in lon_ext:
 
-    # # ZONE 2
-    # if lon_360 is True:
-    #     lon_bins = np.arange(0, 361, 2)  # lon: 0 to 360
-    # elif lon_360 is False:
-    #     lon_bins = np.arange(-180, 181, 2)  # lon: -180 to 180
-    #
-    # # zone 2 : use 2 deg lon bins between 45 and 70 - set to np.nan
-    # variable[abs(lat_data) < 45] = np.nan
-    # variable[abs(lat_data) > 70] = np.nan
+        if lon_360 is True:
+         lon_bins = np.arange(0, 361, el)     # lon: 0 to 360
+        elif lon_360 is False:
+         lon_bins = np.arange(-180, 181, el)
 
-    # ZONE 3
-    # if lon_360 is True:
-    #     lon_bins = np.arange(0, 361, 4)  # lon: 0 to 360
-    # elif lon_360 is False:
-    #     lon_bins = np.arange(-180, 181, 4)  # lon: -180 to 180
-    #
-    # # zone 3 : use 2 deg lon bins between 70 and 80 - set to np.nan
-    # variable[abs(lat_data) < 70] = np.nan
-    # variable[abs(lat_data) > 80] = np.nan
+        if el == 1:
+            variable[abs(lat_data) > 45] = np.nan
 
-    # ZONE 4
-    if lon_360 is True:
-        lon_bins = np.arange(0, 361, 8)  # lon: 0 to 360
-    elif lon_360 is False:
-        lon_bins = np.arange(-180, 181, 8)  # lon: -180 to 180
+            gridded1 = stats.binned_statistic_2d(lon_data, lat_data, variable,
+                                                 statistic=np.nanmean,
+                                                 bins=[lon_bins, lat_bins])
+            gridded_stat1 = gridded1.stat
 
-    # zone 3 : use 2 deg lon bins between 70 and 80 - set to np.nan
-    variable[abs(lat_data) < 80] = np.nan
-    variable[abs(lat_data) > 89] = np.nan
+        elif el == 2:
+            variable[abs(lat_data) < 45] = np.nan
+            variable[abs(lat_data) > 70] = np.nan
 
-    print('Griding and averaging footprints to 1 x 1',
-          'degree equal angle grid boxes...\n')
+            gridded2 = stats.binned_statistic_2d(lon_data, lat_data, variable,
+                                                 statistic=np.nanmean,
+                                                 bins=[lon_bins, lat_bins])
+            gridded_stat2 = gridded2.stat
 
-    print('Lat bins:\n')
-    print(lat_bins)
-    print('Lon bins:\n')
-    print(lon_bins)
+        elif el == 4:
+            variable[abs(lat_data) < 70] = np.nan
+            variable[abs(lat_data) > 80] = np.nan
 
-    # # each FOV has lat and lon indices that map to each grid box
-    # lat_ind = np.digitize(lat_data, lat_bins)
-    # lon_ind = np.digitize(lon_data, lon_bins)
-    #
-    # # loop over FOVs and show their index
-    # for n in range(lat_data.size):
-    #     print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
-    #     print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
+            gridded3 = stats.binned_statistic_2d(lon_data, lat_data, variable,
+                                                 statistic=np.nanmean,
+                                                 bins=[lon_bins, lat_bins])
+            gridded_stat3 = gridded3.stat
 
-    # start timing it
-    tic = time.time()
+        elif el == 8:
+            variable[abs(lat_data) < 80] = np.nan
+            variable[abs(lat_data) > 89] = np.nan
 
-    # compute mean in each grid box - statistics: 'count', 'mean', 'median'
-    gridded = stats.binned_statistic_2d(lon_data, lat_data, variable,
-                                        statistic=np.nanmean,
-                                        bins=[lon_bins, lat_bins])
+            gridded4 = stats.binned_statistic_2d(lon_data, lat_data, variable,
+                                                 statistic=np.nanmean,
+                                                 bins=[lon_bins, lat_bins])
+            gridded_stat4 = gridded4.stat
 
-    gridded_stat = np.rot90(gridded.statistic)
-
-    # finish timing it, print relevant info
-    toc = time.time()
-    print(toc - tic, 'seconds elapsed during grid_to_1x1_deg_equal_angle\n')
-
-    print("Shape of 1 x 1 gridded field:")
-    print(gridded_stat.shape)
-
-    # quick & dirty plot of the result
-    plt.pcolor(gridded_stat)
-    plt.colorbar()
-    plt.show()
-
-    return gridded_stat
+    return gridded_stat1, gridded_stat2, gridded_stat3, gridded_stat4
 
 
 grid_to_1x1_deg_ceres_nested(lat_data=terra_lat_all,
-                lon_data=terra_lon_all,
-                variable=terra_var_all,
-                lon_360=False)
+                             lon_data=terra_lon_all,
+                             variable=terra_var_all,
+                             lon_360=False)
+
+# -------------------------------
+# ZONE 1
+# if lon_360 is True:
+#     lon_bins = np.arange(0, 361)     # lon: 0 to 360
+# elif lon_360 is False:
+#     lon_bins = np.arange(-180, 181)  # lon: -180 to 180
+
+# zone 1 : equatorward of 45 - set to np.nan
+# variable[abs(lat_data) > 45] = np.nan
+
+# -------------------------------
+# # ZONE 2
+# if lon_360 is True:
+#     lon_bins = np.arange(0, 361, 2)  # lon: 0 to 360
+# elif lon_360 is False:
+#     lon_bins = np.arange(-180, 181, 2)  # lon: -180 to 180
+#
+# # zone 2 : use 2 deg lon bins between 45 and 70 - set to np.nan
+# variable[abs(lat_data) < 45] = np.nan
+# variable[abs(lat_data) > 70] = np.nan
+
+# -------------------------------
+# ZONE 3
+# if lon_360 is True:
+#     lon_bins = np.arange(0, 361, 4)  # lon: 0 to 360
+# elif lon_360 is False:
+#     lon_bins = np.arange(-180, 181, 4)  # lon: -180 to 180
+#
+# # zone 3 : use 2 deg lon bins between 70 and 80 - set to np.nan
+# variable[abs(lat_data) < 70] = np.nan
+# variable[abs(lat_data) > 80] = np.nan
+
+# -------------------------------
+# ZONE 4
+# if lon_360 is True:
+#     lon_bins = np.arange(0, 361, 8)  # lon: 0 to 360
+# elif lon_360 is False:
+#     lon_bins = np.arange(-180, 181, 8)  # lon: -180 to 180
+
+# zone 4 : use 2 deg lon bins between 70 and 80 - set to np.nan
+# variable[abs(lat_data) < 80] = np.nan
+# variable[abs(lat_data) > 89] = np.nan
+
+# print('Griding and averaging footprints to 1 x 1',
+#       'degree CERES nested grid...\n')
+#
+# print('Lat bins:\n')
+# print(lat_bins)
+# print('Lon bins:\n')
+# print(lon_bins)
+
+# gridded1 = stats.binned_statistic_2d(lon_data, lat_data, variable,
+#                                      statistic=np.nanmean,
+#                                      bins=[lon_bins, lat_bins])
+# gridded_stat4 = gridded4.stat
+
+
+# # each FOV has lat and lon indices that map to each grid box
+# lat_ind = np.digitize(lat_data, lat_bins)
+# lon_ind = np.digitize(lon_data, lon_bins)
+#
+# # loop over FOVs and show their index
+# for n in range(lat_data.size):
+#     print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
+#     print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
+
+# start timing it
+# tic = time.time()
+#
+# # compute mean in each grid box - statistics: 'count', 'mean', 'median'
+# gridded = stats.binned_statistic_2d(lon_data, lat_data, variable,
+#                                     statistic=np.nanmean,
+#                                     bins=[lon_bins, lat_bins])
+#
+# gridded_stat = np.rot90(gridded.statistic)
+
+# finish timing it, print relevant info
+# toc = time.time()
+# print(toc - tic, 'seconds elapsed during grid_to_1x1_deg_equal_angle\n')
+#
+# print("Shape of 1 x 1 gridded field:")
+# print(gridded_stat.shape)
+#
+# # quick & dirty plot of the result
+# plt.pcolor(gridded_stat)
+# plt.colorbar()
+# plt.show()

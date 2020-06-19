@@ -1,5 +1,7 @@
 # ==========================================================================
-# Author: Ryan C. Scott, ryan.c.scott@nasa.gov
+# Author: Ryan C. Scott
+#         ryan.c.scott@nasa.gov
+#
 # This script compares CRS1deg_beta to SYN1deg-Hour at the Terra/Aqua
 # overpass time.
 # ==========================================================================
@@ -19,7 +21,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='obs_all_toa_lw',
+                                           var_name='obs_clr_toa_lw',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -205,7 +207,7 @@ for k in range(0):
 aqua_diff = aqua_only_mask*aqua_var_gridded - aqua_only_mask*var_syn1deg
 terra_diff = terra_only_mask*terra_var_gridded - terra_only_mask*var_syn1deg
 
-# ignore grid boxes observed by both Terra and Aqua
+# ignore grid boxes observed by Terra and Aqua
 aqua_diff[terra_aqua_mask == 2] = np.nan
 terra_diff[terra_aqua_mask == 2] = np.nan
 
@@ -304,7 +306,6 @@ ceres.compute_regional_averages(field=terra_mean_diff,
 #                           field=field2)
 #
 
-
 # lw_syn1deg_obs, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
 #                                               var_name='obs_clr_toa_lw',
 #                                               fill=True)
@@ -328,3 +329,4 @@ ceres.compute_regional_averages(field=terra_mean_diff,
 #                           varname='', levname='', varunits='',
 #                           lon=lon_syn1deg, lat=lat_syn1deg,
 #                           field=field2)
+
