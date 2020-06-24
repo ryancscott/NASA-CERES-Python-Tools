@@ -21,7 +21,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='obs_clr_toa_lw',
+                                           var_name='obs_all_toa_lw',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -84,19 +84,21 @@ for k in range(24):
         ceres.read_crs_geolocation_dev(file_path=terra_crs_file)
 
     terra_var_all, _, _, _ = \
-        ceres.read_crs_var_dev(file_path=terra_crs_file,
-                               var_name='Longwave flux - upward - total sky',
-                               lev_arg=0,
-                               fill=True)
+        ceres.read_crs_var_dev(
+            file_path=terra_crs_file,
+            var_name='Longwave flux - upward - total sky',
+            lev_arg=0,
+            fill=True)
 
     aqua_lat_all, aqua_lon_all, _, _, _, aqua_sza_all = \
         ceres.read_crs_geolocation_dev(file_path=aqua_crs_file)
 
     aqua_var_all, _, _, _ = \
-        ceres.read_crs_var_dev(file_path=aqua_crs_file,
-                               var_name='Longwave flux - upward - total sky',
-                               lev_arg=0,
-                               fill=True)
+        ceres.read_crs_var_dev(
+            file_path=aqua_crs_file,
+            var_name='Longwave flux - upward - total sky',
+            lev_arg=0,
+            fill=True)
 
     terra_lon_all = ceres.swath_lon_360_to_180(terra_lon_all)
     aqua_lon_all = ceres.swath_lon_360_to_180(aqua_lon_all)
@@ -116,16 +118,16 @@ for k in range(24):
                                  sza_cutoff=90)
 
     terra_var_gridded[k, :, :] = \
-        ceres.grid_to_1x1_deg_equal_angle(lat_data=terra_lat_all,
-                                          lon_data=terra_lon_all,
-                                          variable=terra_var_all,
-                                          lon_360=False)
+        ceres.grid_to_1x1_deg_ceres_nested(lat_data=terra_lat_all,
+                                           lon_data=terra_lon_all,
+                                           variable=terra_var_all,
+                                           lon_360=False)
 
     aqua_var_gridded[k, :, :] = \
-        ceres.grid_to_1x1_deg_equal_angle(lat_data=aqua_lat_all,
-                                          lon_data=aqua_lon_all,
-                                          variable=aqua_var_all,
-                                          lon_360=False)
+        ceres.grid_to_1x1_deg_ceres_nested(lat_data=aqua_lat_all,
+                                           lon_data=aqua_lon_all,
+                                           variable=aqua_var_all,
+                                           lon_360=False)
     print('...', k, ' ...')
 
     for i in range(180):
@@ -134,7 +136,8 @@ for k in range(24):
                 terra_mask[k, i, j] = 1
             if aqua_var_gridded[k, i, j] > 0:
                 aqua_mask[k, i, j] = 1
-            if terra_var_gridded[k, i, j] > 0 and aqua_var_gridded[k, i, j] > 0:
+            if terra_var_gridded[k, i, j] > 0 and \
+               aqua_var_gridded[k, i, j] > 0:
                 both_mask[k, i, j] = 1
 
 
@@ -144,7 +147,7 @@ aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
 
 
-for k in range(0):
+for k in range(2):
 
     if k < 10:
         j = '0' + str(k)
@@ -155,14 +158,16 @@ for k in range(0):
     for i, ax in enumerate(axes.flat):
         if i == 0:
             im = ax.imshow(terra_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title(r'CRS1deg$_{\beta}$ Terra FM1, 1-1-2019:' + str(j) + 'h')
+            ax.set_title(r'CRS1deg$_{\beta}$ Terra FM1, 1-1-2019:'\
+                         + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
             ax.set_yticks([])
         elif i == 1:
             im = ax.imshow(aqua_only_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title(r'CRS1deg$_{\beta}$ Aqua - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
+            ax.set_title(r'CRS1deg$_{\beta}$ Aqua - (Terra$\bigcap$Aqua),\
+             1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
@@ -212,13 +217,13 @@ aqua_diff[terra_aqua_mask == 2] = np.nan
 terra_diff[terra_aqua_mask == 2] = np.nan
 
 #
-fig, (ax1, ax2) = plt.subplots(2, 1)
-ax1.hist(np.reshape(terra_diff, 24*180*360), bins=200, align='mid', rwidth=1)
-ax2.hist(np.reshape(aqua_diff, 24*180*360), bins=200, align='mid', rwidth=1)
-plt.show()
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# ax1.hist(np.reshape(terra_diff, 24*180*360), bins=200, align='mid', rwidth=1)
+# ax2.hist(np.reshape(aqua_diff, 24*180*360), bins=200, align='mid', rwidth=1)
+# plt.show()
 
 
-for k in range(0):
+for k in range(2):
 
     if k < 10:
         j = '0' + str(k)
@@ -275,11 +280,11 @@ ceres.plot_gridded_fields(nrows=2, ncols=1, cen_lon=0,
 
 
 # compute regional averages
-weights = ceres.cos_lat_weight(np.flipud(lat_syn1deg))
-global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg = \
-ceres.compute_regional_averages(field=terra_mean_diff,
-                                latitude=np.flipud(lat_syn1deg),
-                                weights=weights)
+# weights = ceres.cos_lat_weight(np.flipud(lat_syn1deg))
+# global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg = \
+# ceres.compute_regional_averages(field=terra_mean_diff,
+#                                 latitude=np.flipud(lat_syn1deg),
+#                                 weights=weights)
 
 
 # -----------------
