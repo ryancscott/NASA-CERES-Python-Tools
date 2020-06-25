@@ -21,7 +21,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='obs_all_toa_lw',
+                                           var_name='init_all_toa_sw_up',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -86,7 +86,7 @@ for k in range(24):
     terra_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=terra_crs_file,
-            var_name='Longwave flux - upward - total sky',
+            var_name='Shortwave flux - upward - total sky',
             lev_arg=0,
             fill=True)
 
@@ -96,7 +96,7 @@ for k in range(24):
     aqua_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=aqua_crs_file,
-            var_name='Longwave flux - upward - total sky',
+            var_name='Shortwave flux - upward - total sky',
             lev_arg=0,
             fill=True)
 
@@ -147,7 +147,7 @@ aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
 
 
-for k in range(2):
+for k in range(0):
 
     if k < 10:
         j = '0' + str(k)
@@ -166,8 +166,7 @@ for k in range(2):
             ax.set_yticks([])
         elif i == 1:
             im = ax.imshow(aqua_only_mask[k, :, :], vmin=0, vmax=1)
-            ax.set_title(r'CRS1deg$_{\beta}$ Aqua - (Terra$\bigcap$Aqua),\
-             1-1-2019:' + str(j) + 'h')
+            ax.set_title(r'CRS1deg$_{\beta}$ Aqua - (Terra$\bigcap$Aqua), 1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
@@ -223,7 +222,7 @@ terra_diff[terra_aqua_mask == 2] = np.nan
 # plt.show()
 
 
-for k in range(2):
+for k in range(0):
 
     if k < 10:
         j = '0' + str(k)
@@ -262,9 +261,9 @@ aqua_mean_diff = np.nanmean(aqua_diff, axis=0)
 # combine fields into a single matrix to loop over figure axes
 field = np.stack((terra_mean_diff, aqua_mean_diff), axis=2)
 title_str = [r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
+             r'All-Sky TOA Outgoing SW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
              r'Mean Daytime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
+             r'All-Sky TOA Outgoing SW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
              ]
 
 
@@ -273,7 +272,7 @@ cmap = ceres.set_colormap(Balance_20, 0)
 
 ceres.plot_gridded_fields(nrows=2, ncols=1, cen_lon=0,
                           date_str='', title_str=title_str,
-                          cmap=cmap, cmap_lims=((-30, 30), (-30, 30)),
+                          cmap=cmap, cmap_lims=((-100, 100), (-100, 100)),
                           varname='', levname='', varunits='',
                           lon=lon_syn1deg, lat=lat_syn1deg,
                           field=field)
