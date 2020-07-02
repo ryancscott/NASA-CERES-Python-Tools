@@ -54,70 +54,178 @@ for i, site in enumerate(sites):
     file = site[2] + '_' + satellite + '_' + date + '.txt'
     sites[i].append(file)
 
-# for footprints near the surface site, output the
-# year, month, day, hour, minute, second (this info
-# is needed to match w/ the surface observations) of
-# the FOV by calling jul2greg.daycnv, along with
-# relevant fluxes and other parameters
-
-yr, mn, day, hr, mi, sec, ms = jul2greg.daycnv(xjd=2458484.583331018, mode="dtlist")
-
-print(yr, mn, day, hr, mi, sec, ms)
-
-# # read in full month of CRS files
-# var, lon, lat, sza, = ceres.read_day_of_crs_files(
-#     path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019/',
-#     file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.20190100',
-#     variable='Julian Time',
-#     lev_arg=-1,
-#     fill=True)
-
-fov_var, fov_lon, fov_lat, fov_sza = ceres.read_day_of_crs_files(
-                               path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
-                               file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.20190101',
-                               variable='Julian Time',
-                               lev_arg=-1,
-                               fill=True)
+# read in full month of CRS files
+# fov_tim, fov_lon, fov_lat, fov_sza, = \
+#     ceres.read_month_of_crs_files(
+#         path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019/',
+#         file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.20190100',
+#         variable='Julian Time',
+#         lev_arg=-1,
+#         fill=True)
 
 
-# print out information from FOV extracted over site
-header = ['year', 'month', 'day', 'hour', 'min', 'sec', 'lat', 'lon', 'sza', 'etc.']
 
-# function calculate distances between CERES FOVs & validation site
+def read_month_of_crs_files_validation(path, file_struc):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire month of CRS data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without day & hour portion at the end)
+    :param variable: variable to be read from file
+    :param lev_arg: level argument (0 = TOA, 5 = sfc)
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    tim_all = np.empty([])
+    swd_all = np.empty([])
+    lwd_all = np.empty([])
+
+    for d in range(1, 8, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            file_path = path + file
+            print(file_path)
+
+            lat, lon, pres_levs, obs_tim, sfc_ind, sza \
+                = ceres.read_crs_geolocation_dev(file_path)
+
+            swd, _, _, _ = \
+                ceres.read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Shortwave flux - downward - total sky',
+                    lev_arg=5,
+                    fill=False)
+
+            lwd, _, _, _ = \
+                ceres.read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Longwave flux - downward - total sky',
+                    lev_arg=5,
+                    fill=False)
+
+            len_tot.append(lat.shape[0])
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            tim_all = np.concatenate((tim_all, obs_tim), axis=None)
+            swd_all = np.concatenate((tim_all, obs_tim), axis=None)
+            lwd_all = np.concatenate((tim_all, obs_tim), axis=None)
+
+    print(len_tot)
+    print(lat_all.shape)
+
+    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
+
+
+# read in full day of CRS files
+fov_lon, fov_lat, fov_tim, fov_sza, fov_swd, fov_lwd = \
+    read_month_of_crs_files_validation(
+        path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
+        file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901')
+
+
 def haversine(cer_lat, cer_lon, site_lat, site_lon):
+    """
+    -------------------------------------------------------------------
+    Function calculates the distance between CERES FOVs and
+    the surface validation site using the haversine formula
+    -------------------------------------------------------------------
+    """
     import math
 
     lon1, lon2 = cer_lon, site_lon
     lat1, lat2 = cer_lat, site_lat
 
-    R = 6371000.  # radius of Earth in meters
+    r = 6371000.  # radius of Earth in meters
     phi_1 = math.radians(cer_lat)
     phi_2 = math.radians(site_lat)
 
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
 
-    a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
+    a = math.sin(delta_phi / 2.0) ** 2 + \
+        math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    meters = R * c        # output distance in meters
-    km = meters / 1000.0  # output distance in kilometers
+    dist_km = (r * c) / 1000.0  # output distance in kilometers
+    dist_km = round(dist_km, 3)
 
-    meters = round(meters, 3)
-    km = round(km, 3)
+    # print(f"Distance: {km} km")
 
-    print(f"Distance: {km} km")
+    return dist_km
 
-    return km
+# ==============================================================================
+#
+# For each surface validation site, loop over and compute the distance of all
+# CERES footprints to the site. Extract FOVs within 10 km of site and write out
+# relevant data to a text file.
+#
+# ==============================================================================
 
 
-for site in sites:                            # for each site...
-    for i, fov in enumerate(list(zip(fov_lat, fov_lon))):   # loop over CERES FOVs...
-        print('Computing distance between FOV', fov, 'and', site[2], 'at', str(site[0]), str(site[1]))
+for site in sites:
+
+    # header describing data in each file
+    header = str(site[2]) + ': ' + str(site[0]) + ', ' + str(site[1]) + '\n' + \
+             'year  mon day hour min  sec    dist    fov_lat     fov_lon '
+
+    # open site output file
+    file = open('/Users/rcscott2/Desktop/CRS/Validation_files/'+site[3], 'w')
+    file.write(header)
+    file.write('\n')
+
+    for i, fov in enumerate(list(zip(fov_lat, fov_lon))):
+
+        # code runs faster if print statement is suppressed
+        # print('Distance between footprint', i, fov, 'and',
+        #      site[2], 'at', str(site[0]), str(site[1]))
+
         dist = haversine(fov[0], fov[1], site[0], site[1])
+
         if dist <= 10:
-            break
+
+            # FOV julian time conversion to gregorian date
+            yr, mn, day, hr, mi, sec, _ = \
+                jul2greg.daycnv(xjd=fov_tim[i], mode="dtlist")
+
+            # data to write to file
+            data = [yr, mn, day, hr, mi, sec, dist,
+                    fov[0], fov[1], fov_sza[i], fov_swd[i],
+                    fov_lwd[i]]
+
+            # output data to the file
+            for el in data:
+                file.write(str(el))
+                file.write(',  ')
+
+            file.write('\n')
+
+
+
+
+
+
+
+
 
 
 
