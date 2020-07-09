@@ -19,7 +19,7 @@
 #
 # Requires: numpy, scipy, matplotlib, netcdf4, pyhdf, cartopy, datetime, &
 #           palettable. I recommend installing these libraries using conda,
-#           pip, or an IDE
+#           pip, or an IDE.
 #
 # Author:   Ryan C. Scott, SSAI
 #           ryan.c.scott@nasa.gov
@@ -69,10 +69,12 @@
 # multiple_regression         <- regress field on multiple other fields
 # global_map                  <- plot map of gridded field
 # plot_time_series            <- plot time series of field
+# compute_linear_trend        <- calculate linear trend - UNDER CONSTRUCTION
 # =====================
-# Under development :
+# Validation
 # =====================
-# compute_linear_trend        <- calculate linear trend
+# read_binary_cave_rad_obs    <- read data from D. Rutan's CAVE: ARM, BSRN, etc
+# jul2greg                    <- convert Julian time to Gregorian yr, mon, etc.
 # ==============================================================================
 
 
@@ -630,7 +632,9 @@ def read_month_of_ssf_files(path, file_struc, variable):
             lat, lon, tim, sza = read_ssf_geolocation(file_path)
             # read variable from file
             var, var_name, var_units = \
-            read_ssf_var(file_path=file_path, var_name=variable, fill=True)
+                read_ssf_var(file_path=file_path,
+                             var_name=variable,
+                             fill=True)
 
             # len_tot contains the length (num FOVs) of each individual swath
             len_tot.append(lat.shape[0])
@@ -688,12 +692,14 @@ def read_month_of_crs_files(path, file_struc, variable, lev_arg):
             file_path = path + file
             print(file_path)
 
-            lat, lon, pres_levs, obs_tim, sfc_ind, sza = read_crs_geolocation_dev(file_path)
+            lat, lon, pres_levs, obs_tim, sfc_ind, sza \
+                = read_crs_geolocation_dev(file_path)
 
             var, var_name, var_units, var_lev = \
-            read_crs_var_dev(file_path=file_path,
-                                   var_name=variable,
-                                   lev_arg=lev_arg, fill=False)
+                read_crs_var_dev(file_path=file_path,
+                                 var_name=variable,
+                                 lev_arg=lev_arg,
+                                 fill=False)
 
             len_tot.append(lat.shape[0])
             sza_all = np.concatenate((sza_all, sza), axis=None)
@@ -1338,7 +1344,7 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
                        edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
         #ax.set_extent([-180, 180, -90, 90], projection)
-        ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
+        ax.text(0.5, -0.15, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
                 transform=ax.transAxes, fontsize=10)
@@ -1527,10 +1533,12 @@ def read_ebaf_var(file_path, variable):
 def compute_monthly_anomalies(field, field_name):
     """
     ----------------------------------------------------------------------------
-    (1) Compute long-term average for each calendar month, i.e., the monthly mean seasonal cycle
-    (2) Subtract the appropriate long-term means from the corresponding monthly fields to get monthly anomalies
+    (1) Compute long-term average for each calendar month, i.e., the monthly
+        mean seasonal cycle, using the entire time series.
+    (2) Subtract the appropriate interannual monthly means from the raw monthly
+        fields to get a time series of deseasonalized monthly anomalies
     ----------------------------------------------------------------------------
-    :param field: variable for which to compute the climatology/anomaly [lat,lon,time]
+    :param field: variable to compute anomalies   [lat,lon,time]
     :param field_name: name of variable
     ----------------------------------------------------------------------------
     :return: (1) monthly_anomalies : monthly anomaly time series at each grid box
@@ -2003,4 +2011,295 @@ def global_map(lon, lat, field,
 
 
 # ========================================================================
+# VALIDATION FUNCTIONS
+
+
+def read1min_binary_cave_rad_obs(file_path):
+    """
+    ----------------------------------------------------------------------------
+    This function reads minute-resolution surface radiation flux data from
+    binary files from various surface sites around the globe from David Rutan's
+    CAVE project -- including SURFRAD, ARM, BSRN, etc. Each binary file was
+    created using Fortran and thus includes header/trailing bytes.
+    ----------------------------------------------------------------------------
+    :param file_path: path to binary data file
+    :return: (1) csza = cosine of SZA
+             (2) lwu = upwelling LW flux
+             (3) lwd = downwelling LW flux
+             (4) swdif = diffuse SW flux
+             (5) swu = upwelling SW flux
+             (6) swdir = direct SW flux
+             (7) swd = downwelling SW flux
+    ----------------------------------------------------------------------------
+    """
+    import os
+    import numpy as np
+    from scipy.io import FortranFile
+
+    b = os.path.getsize(file_path)
+    print('Number of bytes:', b)
+
+    size = int((b - 8)/4)
+    print('Size:', size)
+
+    nrec = int(size/44640)
+    print('Number of records:', nrec)
+
+    f = FortranFile(file_path, 'r', '>u4')
+    d = f.read_reals('>f4')
+
+    data = np.array(d)
+    data = np.reshape(data, (nrec, 44640))
+    print('Data shape:', data.shape)
+
+    # some files have different fill values
+    # that will never ever be physical
+    data[data == -999.] = np.nan
+    data[data == -9999.] = np.nan
+
+    csza = data[0, :]   # cosine of SZA
+    lwu = data[1, :]    # LW up flux      (Pyrgeometer)
+    lwd = data[2, :]    # LW down flux    (Pyrgeometer)
+    swdif = data[3, :]  # SW diffuse flux (Shaded Pyranometer)
+    swu = data[4, :]    # SW up flux      (Pyranometer)
+    swdir = data[5, :]  # SW direct flux  (Normal Incidence Pyrheliometer)
+    swd = data[6, :]    # SW down flux    (Unshaded Pyranometer)
+
+    return csza, lwu, lwd, swdif, swu, swdir, swd
+
+
+# ========================================================================
+
+
+def jul2greg(xjd, mode="dtlist"):
+    """
+    *** THIS FUNCTION IS FROM THE PYASTRONOMY PACKAGE ***
+
+    Converts Julian dates to Gregorian calendar dates.
+    Handles both individual floats as xjd and iterables such as
+    lists and arrays. In the latter case, the result is returned
+    in the form of a list.
+    Parameters
+    ----------
+    xjd : float, list, array
+        The Julian date
+    mode : string, {idl, dtlist, dt}, optional
+        Determines format of output. If 'idl' is given (default),
+        a list holding [year, month, day, (fractional) hours] is
+        returned; this mimics the behavior of the IDL astrolib function.
+        If 'dtlist' is given, a list holding
+        [year, month, day, hours, minutes, seconds, microseconds] is
+        returned. Finally, if 'dt' is specified, a Python
+        datetime object will be returned. If the input is an iterable,
+        the mode determines the format of the individual items in the
+        result list.
+    Returns
+    -------
+    Calendar date : list or datetime object
+        A list holding [year, month, day, (fractional) hours] (default)
+        or [year, month, day, hours, minutes, seconds, microseconds].
+        Alternatively, a Python datetime object is returned. The format
+        depends on the 'mode' specified. If the input is an iterable of
+        Julian dates, the output is a list.
+    Notes
+    -----
+    .. note:: This function was ported from the IDL Astronomy User's Library.
+    :IDL - Documentation:
+    NAME:
+          DAYCNV
+    PURPOSE:
+          Converts Julian dates to Gregorian calendar dates
+    CALLING SEQUENCE:
+          DAYCNV, XJD, YR, MN, DAY, HR
+    INPUTS:
+          XJD = Julian date, positive double precision scalar or vector
+    OUTPUTS:
+          YR = Year (Integer)
+          MN = Month (Integer)
+          DAY = Day (Integer)
+          HR = Hours and fractional hours (Real).   If XJD is a vector,
+                  then YR,MN,DAY and HR will be vectors of the same length.
+    EXAMPLE:
+          IDL> DAYCNV, 2440000.D, yr, mn, day, hr
+          yields yr = 1968, mn =5, day = 23, hr =12.
+    WARNING:
+          Be sure that the Julian date is specified as double precision to
+          maintain accuracy at the fractional hour level.
+    METHOD:
+          Uses the algorithm of Fliegel and Van Flandern (1968) as reported in
+          the "Explanatory Supplement to the Astronomical Almanac" (1992), p. 604
+          Works for all Gregorian calendar dates with XJD > 0, i.e., dates after
+          -4713 November 23.
+    REVISION HISTORY:
+          Converted to IDL from Yeoman's Comet Ephemeris Generator,
+          B. Pfarr, STX, 6/16/88
+          Converted to IDL V5.0   W. Landsman   September 1997
+    """
+
+    import datetime
+    import numpy
+    import six.moves as smo
+
+    # if not mode in ('idl', 'dtlist', 'dt'):
+    #     raise(PE.PyAValError("Unknown mode: " + str(mode),
+    #                          where="daycnv",
+    #                          solution="Use any of 'idl', 'dtlist', or 'dt'."))
+
+    # Adjustment needed because Julian day starts at noon, calendar day at midnight
+
+    iterable = hasattr(xjd, "__iter__")
+
+    # Use iterable throughout calculations
+    if not iterable:
+        xjd = [xjd]
+
+    jd = numpy.array(xjd).astype(int)  # Truncate to integral day
+    frac = numpy.array(xjd).astype(float) - jd + \
+        0.5  # Fractional part of calendar day
+    gi = numpy.where(frac >= 1.0)
+    frac[gi] -= 1.0
+    jd[gi] += 1
+
+    hr = frac * 24.0
+    l = jd + 68569
+    n = 4 * l // 146097
+    l = l - (146097 * n + 3) // 4
+    yr = 4000 * (l + 1) // 1461001
+    l = l - 1461 * yr // 4 + 31  # 1461 = 365.25 * 4
+    mn = 80 * l // 2447
+    day = l - 2447 * mn // 80
+    l = mn // 11
+    mn = mn + 2 - 12 * l
+    yr = 100 * (n - 49) + yr + l
+    if mode in ('dt', 'dtlist'):
+        # [year, month, day, hours, minutes, seconds, microseconds] requested
+        hour = numpy.floor(hr).astype(int)
+        minute = numpy.floor((hr - numpy.floor(hr)) * 60).astype(int)
+        sec = numpy.floor((hr - hour - minute / 60.) * 3600.).astype(int)
+        msec = (3600 * 1e6 * (hr - hour - minute / 60. - sec / 3600.)).astype(int)
+        if mode == 'dtlist':
+            if not iterable:
+                return [yr[0], mn[0], day[0], hour[0], minute[0], sec[0], msec[0]]
+            return [[yr[i], mn[i], day[i], hour[i], minute[i], sec[i], msec[i]] for i in smo.range(len(yr))]
+        # Return datetime object
+        dts = [datetime.datetime(*(yr[i], mn[i], day[i], hour[i],
+                                   minute[i], sec[i], msec[i])) for i in smo.range(len(yr))]
+        if not iterable:
+            return dts[0]
+        return dts
+    if not iterable:
+        return [yr[0], mn[0], day[0], hr[0]]
+    return [[yr[i], mn[i], day[i], hr[i]] for i in smo.range(len(yr))]
+
+
+# ========================================================================
+
+
+def read_month_of_crs_files_validation(path, file_struc):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over and reads an entire month of CRS data
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without day & hour portion at the end)
+    :param variable: variable to be read from file
+    :param lev_arg: level argument (0 = TOA, 5 = sfc)
+    :return: variable, lat, lon, sza
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    tim_all = np.empty([])
+    swd_all = np.empty([])
+    lwd_all = np.empty([])
+
+    for d in range(1, 8, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            file_path = path + file
+            print(file_path)
+
+            lat, lon, pres_levs, tim, sfc_ind, sza \
+                = read_crs_geolocation_dev(file_path)
+
+            swd, _, _, _ = \
+                read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Shortwave flux - downward - total sky',
+                    lev_arg=5,
+                    fill=False)
+
+            lwd, _, _, _ = \
+                read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Longwave flux - downward - total sky',
+                    lev_arg=5,
+                    fill=False)
+
+            len_tot.append(lat.shape[0])
+
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            tim_all = np.concatenate((tim_all, tim), axis=None)
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            swd_all = np.concatenate((swd_all, swd), axis=None)
+            lwd_all = np.concatenate((lwd_all, lwd), axis=None)
+
+    print(len_tot)
+    print(lat_all.shape)
+
+    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
+
+
+# ==============================================================================
+
+
+def haversine(cer_lat, cer_lon, site_lat, site_lon):
+    """
+    -------------------------------------------------------------------
+    Function calculates the distance between CERES FOVs and
+    the surface validation site using the haversine formula
+    -------------------------------------------------------------------
+    """
+    import math
+
+    lon1, lon2 = cer_lon, site_lon
+    lat1, lat2 = cer_lat, site_lat
+
+    r = 6371000.  # radius of Earth in meters
+    phi_1 = math.radians(cer_lat)
+    phi_2 = math.radians(site_lat)
+
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    a = math.sin(delta_phi / 2.0) ** 2 + \
+        math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    dist_km = (r * c) / 1000.0  # output distance in kilometers
+    dist_km = round(dist_km, 3)
+
+    # print(f"Distance: {km} km")
+
+    return dist_km
+
+
+# ==============================================================================
 
