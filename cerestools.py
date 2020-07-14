@@ -2073,7 +2073,7 @@ def read1min_binary_cave_rad_obs(file_path):
 
 def jul2greg(xjd, mode="dtlist"):
     """
-    *** THIS FUNCTION IS FROM THE PYASTRONOMY PACKAGE ***
+    *** This function is from the PyAstronomy package ***
 
     Converts Julian dates to Gregorian calendar dates.
     Handles both individual floats as xjd and iterables such as
@@ -2198,13 +2198,12 @@ def jul2greg(xjd, mode="dtlist"):
 def read_month_of_crs_files_validation(path, file_struc):
     """
     ----------------------------------------------------------------------------
-    This function loops over and reads an entire month of CRS data
+    This function loops over an entire month of CRS data files and reads all
+    relevant variables.
     ----------------------------------------------------------------------------
     :param path: path to files
-    :param file_struc: file structure (without day & hour portion at the end)
-    :param variable: variable to be read from file
-    :param lev_arg: level argument (0 = TOA, 5 = sfc)
-    :return: variable, lat, lon, sza
+    :param file_struc: file structure (without the day & hr portion at the end)
+    :return: lon, lat, sza, time, variables
     ----------------------------------------------------------------------------
     """
     import numpy as np
@@ -2221,7 +2220,7 @@ def read_month_of_crs_files_validation(path, file_struc):
     swd_all = np.empty([])
     lwd_all = np.empty([])
 
-    for d in range(1, 8, 1):
+    for d in range(1, 32, 1):
         if d < 10:
             d = '0' + str(d)
 
@@ -2230,6 +2229,14 @@ def read_month_of_crs_files_validation(path, file_struc):
                 k = '0' + str(k)
 
             file = file_struc + str(d) + str(k)
+
+            # skip missing data files... edit as needed
+            # otherwise their absence would break the loop
+            if file == 'CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019011615':
+                continue
+
+            if file == 'CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019013117':
+                continue
 
             file_path = path + file
             print(file_path)
