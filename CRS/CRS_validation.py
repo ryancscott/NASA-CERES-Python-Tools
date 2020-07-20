@@ -1,16 +1,22 @@
 # ==============================================================================
-# This script is used for the validation of the CRS computed surface fluxes.
+# This script is used for validating CRS computed surface fluxes against surface
+# radiation measurements from ARM, BSRN, SURFRAD, etc.
 #
-# Author: Ryan C. Scott
+# In particular, this script isolates CERES FOVs within 10 km of the surface
+# validation sites (listed in sites.txt) and output the results to text files.
+# The resultant output files are used by <name.py> to match the surface
+# observations to the time of the CERES FOV.
+#
+# Author: Ryan Scott
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
 
 import numpy as np
-import jul2greg
 import cerestools as ceres
+from palettable.colorbrewer.sequential import BuPu_9
 
-# path to text file containing information about surface flux validation sites
-sites_path = '/Users/rcscott2/Desktop/FLASHFlux/FOR_Ryan_SSF/site.txt'
+# path to text file containing information about surface validation sites
+sites_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/site.txt'
 
 # satellite and date information for output files
 satellite = 'Terra-FM1'
@@ -33,151 +39,59 @@ file.close()
 val_site_lats = []
 val_site_lons = []
 val_site_name = []
+val_site_type = []
 val_site_desc = []
 for el in list_of_lists:
     val_site_lats.append(el[0])
     val_site_lons.append(el[1])
     val_site_name.append(el[2])
-    val_site_desc.append(el[3:])
+    val_site_type.append(el[3])
+    val_site_desc.append(el[4:])
 
 # convert list(str) of lat/lon to np arrays
 val_site_lats = np.asarray(val_site_lats, dtype=np.float)
 val_site_lons = np.asarray(val_site_lons, dtype=np.float)
 
 # create a list of tuples containing site lat, lon, & name
-sites = list(zip(val_site_lats, val_site_lons, val_site_name))
+sites = list(zip(val_site_name, val_site_lats, val_site_lons, val_site_type))
 # convert to list of lists
 sites = [list(el) for el in sites]
 
 # construct an output file for each site, add to "sites" list of lists
 for i, site in enumerate(sites):
-    file = site[2] + '_' + satellite + '_' + date + '.txt'
+    file = site[0] + '_' + satellite + '_' + date + '.txt'
     sites[i].append(file)
 
-# read in full month of CRS files
-# fov_tim, fov_lon, fov_lat, fov_sza, = \
-#     ceres.read_month_of_crs_files(
-#         path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019/',
-#         file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_2222TH.20190100',
-#         variable='Julian Time',
-#         lev_arg=-1,
-#         fill=True)
+cmap = ceres.set_colormap(BuPu_9, typ_arg=0)
+ceres.plot_swath(lon=val_site_lons,
+                 lat=val_site_lats,
+                 field=val_site_lons,
+                 varname='',
+                 levname='',
+                 varunits='',
+                 nrows=1,
+                 ncols=1,
+                 cen_lon=0,
+                 cmap=cmap,
+                 cmap_lims=(0, 1),
+                 date='',
+                 nightshade=False,
+                 date_str=date,
+                 title_str='Surface validation sites')
 
 
-
-def read_month_of_crs_files_validation(path, file_struc):
-    """
-    ----------------------------------------------------------------------------
-    This function loops over and reads an entire month of CRS data
-    ----------------------------------------------------------------------------
-    :param path: path to files
-    :param file_struc: file structure (without day & hour portion at the end)
-    :param variable: variable to be read from file
-    :param lev_arg: level argument (0 = TOA, 5 = sfc)
-    :return: variable, lat, lon, sza
-    ----------------------------------------------------------------------------
-    """
-    import numpy as np
-
-    print('============================================')
-    print('\tReading CRS Files...\t\t\t')
-    print('============================================')
-
-    len_tot = []
-    sza_all = np.empty([])
-    lat_all = np.empty([])
-    lon_all = np.empty([])
-    tim_all = np.empty([])
-    swd_all = np.empty([])
-    lwd_all = np.empty([])
-
-    for d in range(1, 8, 1):
-        if d < 10:
-            d = '0' + str(d)
-
-        for k in range(24):
-            if k < 10:
-                k = '0' + str(k)
-
-            file = file_struc + str(d) + str(k)
-
-            file_path = path + file
-            print(file_path)
-
-            lat, lon, pres_levs, obs_tim, sfc_ind, sza \
-                = ceres.read_crs_geolocation_dev(file_path)
-
-            swd, _, _, _ = \
-                ceres.read_crs_var_dev(
-                    file_path=file_path,
-                    var_name='Shortwave flux - downward - total sky',
-                    lev_arg=5,
-                    fill=False)
-
-            lwd, _, _, _ = \
-                ceres.read_crs_var_dev(
-                    file_path=file_path,
-                    var_name='Longwave flux - downward - total sky',
-                    lev_arg=5,
-                    fill=False)
-
-            len_tot.append(lat.shape[0])
-            sza_all = np.concatenate((sza_all, sza), axis=None)
-            lat_all = np.concatenate((lat_all, lat), axis=None)
-            lon_all = np.concatenate((lon_all, lon), axis=None)
-            tim_all = np.concatenate((tim_all, obs_tim), axis=None)
-            swd_all = np.concatenate((tim_all, obs_tim), axis=None)
-            lwd_all = np.concatenate((tim_all, obs_tim), axis=None)
-
-    print(len_tot)
-    print(lat_all.shape)
-
-    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
-
-
-# read in full day of CRS files
+# read in full month of CRS data
 fov_lon, fov_lat, fov_tim, fov_sza, fov_swd, fov_lwd = \
-    read_month_of_crs_files_validation(
+    ceres.read_month_of_crs_files_validation(
         path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
         file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901')
 
 
-def haversine(cer_lat, cer_lon, site_lat, site_lon):
-    """
-    -------------------------------------------------------------------
-    Function calculates the distance between CERES FOVs and
-    the surface validation site using the haversine formula
-    -------------------------------------------------------------------
-    """
-    import math
-
-    lon1, lon2 = cer_lon, site_lon
-    lat1, lat2 = cer_lat, site_lat
-
-    r = 6371000.  # radius of Earth in meters
-    phi_1 = math.radians(cer_lat)
-    phi_2 = math.radians(site_lat)
-
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-
-    a = math.sin(delta_phi / 2.0) ** 2 + \
-        math.cos(phi_1) * math.cos(phi_2) * math.sin(delta_lambda / 2.0) ** 2
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    dist_km = (r * c) / 1000.0  # output distance in kilometers
-    dist_km = round(dist_km, 3)
-
-    # print(f"Distance: {km} km")
-
-    return dist_km
-
 # ==============================================================================
 #
-# For each surface validation site, loop over and compute the distance of all
-# CERES footprints to the site. Extract FOVs within 10 km of site and write out
-# relevant data to a text file.
+# For each surface validation site, loop over CERES footprints & compute the
+# distance to each site. Extract FOVs within 10 km of the site and write out
+# relevant data to a .txt file.
 #
 # ==============================================================================
 
@@ -185,11 +99,13 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
 for site in sites:
 
     # header describing data in each file
-    header = str(site[2]) + ': ' + str(site[0]) + ', ' + str(site[1]) + '\n' + \
-             'year  mon day hour min  sec    dist    fov_lat     fov_lon '
+    header = str(site[0]) + ', ' + str(site[1]) + ', ' + str(site[2]) + ', ' \
+             + str(site[3]) + '\n' + \
+             'year  mon day hour min  sec    dist    fov_lat     fov_lon  ' \
+             '   fov_sza      fov_swd     fov_lwd '
 
     # open site output file
-    file = open('/Users/rcscott2/Desktop/CRS/Validation_files/'+site[3], 'w')
+    file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/Extracted_FOVs/'+site[4], 'w')
     file.write(header)
     file.write('\n')
 
@@ -199,13 +115,13 @@ for site in sites:
         # print('Distance between footprint', i, fov, 'and',
         #      site[2], 'at', str(site[0]), str(site[1]))
 
-        dist = haversine(fov[0], fov[1], site[0], site[1])
+        dist = ceres.haversine(fov[0], fov[1], site[1], site[2])
 
         if dist <= 10:
 
             # FOV julian time conversion to gregorian date
             yr, mn, day, hr, mi, sec, _ = \
-                jul2greg.daycnv(xjd=fov_tim[i], mode="dtlist")
+                ceres.jul2greg(xjd=fov_tim[i], mode="dtlist")
 
             # data to write to file
             data = [yr, mn, day, hr, mi, sec, dist,
@@ -220,18 +136,5 @@ for site in sites:
             file.write('\n')
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# ==============================================================================
 

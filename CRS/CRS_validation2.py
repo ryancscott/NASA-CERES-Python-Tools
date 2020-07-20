@@ -1,3 +1,13 @@
+# ==============================================================================
+# This script is used for validating CRS computed surface fluxes against surface
+# radiation measurements from ARM, BSRN, SURFRAD, etc.
+#
+# In particular, this script extracts surface observations coincident in time
+# with the CERES FOV and outputs the results to text files.
+#
+# Author: Ryan Scott
+#         ryan.c.scott@nasa.gov
+# ==============================================================================
 
 
 import os
@@ -15,7 +25,7 @@ crs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
            'Extracted_FOVs/' + satellite + '/'
 
 
-def plot_ts_scatplots():
+def plot_ts_scatplots(site_name):
     # scatter plots
     plt.figure(figsize=(12, 7))
     plt.subplot(1, 2, 1)
@@ -26,9 +36,10 @@ def plot_ts_scatplots():
     plt.xlim([100, 500])
     plt.ylim([100, 500])
     plt.axis('square')
-    plt.title(r'LW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.xlabel('Surface Observed')
-    plt.ylabel('CRS Computed')
+    plt.title('Surface Validation Site: ' + site_name + '\n' +
+              r'LW$\downarrow$ Flux [W m$^{-2}$]')
+    plt.xlabel('Surface Observed Flux')
+    plt.ylabel('CRS Computed Flux')
     plt.grid()
 
     plt.subplot(1, 2, 2)
@@ -39,9 +50,10 @@ def plot_ts_scatplots():
     plt.xlim([0, 1400])
     plt.ylim([0, 1400])
     plt.axis('square')
-    plt.title(r'SW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.xlabel('Surface Observed')
-    plt.ylabel('CRS Computed')
+    plt.title('Surface Validation Site: ' + site_name + '\n' +
+              r'SW$\downarrow$ Flux [W m$^{-2}$]')
+    plt.xlabel('Surface Observed Flux')
+    plt.ylabel('CRS Computed Flux')
     plt.grid()
     plt.show()
 
@@ -187,7 +199,7 @@ for obs_file in os.listdir(obs_path):
         # print('Instantaneous - 15:', inst_ind - 15)
         # print('Instantaneous + 15:', inst_ind + 15)
 
-        ind_range = list(zip(inst_ind - 10, inst_ind + 10))
+        ind_range = list(zip(inst_ind - 5, inst_ind + 5))
         # print(ind_range)
 
         sw_ind = []
@@ -215,7 +227,7 @@ for obs_file in os.listdir(obs_path):
         print('FOV cos(SZA):\n', fov_mu0)
 
         # plot time series and scatter plots for each site
-        # plot_ts_scatplots()
+        plot_ts_scatplots(site_name)
 
         # output FOV and site information to file
         new_file = site_name+'_'+'CRS+OBS_' + satellite + '-' + flight_model + '_' + yr_mon + '.txt'
