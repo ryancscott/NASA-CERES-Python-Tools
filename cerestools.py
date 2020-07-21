@@ -7,7 +7,7 @@
 # Module:   cerestools.py
 #
 # Purpose:  This library contains Python 3 functions to read, process, analyze
-#           and visualize data from NASA's Clouds and the Earth's Radiant Energy
+#           and visualize data from NASA's Clouds & the Earth's Radiant Energy
 #           System (CERES) satellite mission. Functions are included to work
 #           with Level 2 swath data & Level 3 time-interpolated and spatially-
 #           averaged (TISA) gridded fields. This library is under development
@@ -1363,7 +1363,7 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
     return
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def read_syn1deg_hdf(file_path, var_name, fill):
@@ -1399,7 +1399,7 @@ def read_syn1deg_hdf(file_path, var_name, fill):
     return var_field, var_name2, var_units
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def print_nc_file_info(file_path):
@@ -1427,7 +1427,7 @@ def print_nc_file_info(file_path):
     return
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def read_ebaf_geolocation(file_path):
@@ -1466,7 +1466,7 @@ def read_ebaf_geolocation(file_path):
     return latitude, longitude, lat, lon, time
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def read_ebaf_start_month_year(file_path):
@@ -1499,7 +1499,7 @@ def read_ebaf_start_month_year(file_path):
     return start_month, start_year
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def read_ebaf_var(file_path, variable):
@@ -1527,7 +1527,7 @@ def read_ebaf_var(file_path, variable):
     return var, var_name, var_units
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def compute_monthly_anomalies(field, field_name):
@@ -1608,7 +1608,7 @@ def compute_monthly_anomalies(field, field_name):
     return monthly_anomalies, seasonal_cycle
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def cos_lat_weight(lat_vector):
@@ -1646,7 +1646,7 @@ def cos_lat_weight(lat_vector):
     return weight
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def compute_annual_climatology(field):
@@ -1670,7 +1670,7 @@ def compute_annual_climatology(field):
     return mean_field, standard_deviation_field
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def compute_regional_averages(field, latitude, weights):
@@ -1727,7 +1727,7 @@ def compute_regional_averages(field, latitude, weights):
     return global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def composite_difference(field, ind1, ind2):
@@ -1754,7 +1754,7 @@ def composite_difference(field, ind1, ind2):
     return composite_diff
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def global_mean_time_series(field, weight):
@@ -1779,7 +1779,7 @@ def global_mean_time_series(field, weight):
     return mean_time_series
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def plot_monthly_time_series(var, name, units, start_mo, start_yr):
@@ -1815,7 +1815,7 @@ def plot_monthly_time_series(var, name, units, start_mo, start_yr):
     return
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def simple_regression(y_anomalies, x_anomalies):
@@ -1844,7 +1844,7 @@ def simple_regression(y_anomalies, x_anomalies):
     return coefficients
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def multiple_regression_2xi(y_anomalies, x1_anomalies, x2_anomalies):
@@ -1877,7 +1877,7 @@ def multiple_regression_2xi(y_anomalies, x1_anomalies, x2_anomalies):
 
     return coefficients
 
-# ========================================================================
+# ==============================================================================
 
 
 def multiple_regression(y_anomalies, *x_anomalies):
@@ -1936,7 +1936,7 @@ def multiple_regression(y_anomalies, *x_anomalies):
     return coefficients
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def global_map(lon, lat, field,
@@ -2010,8 +2010,8 @@ def global_map(lon, lat, field,
     return
 
 
-# ========================================================================
-# VALIDATION FUNCTIONS
+# ==============================================================================
+# SSF VALIDATION FUNCTIONS
 
 
 def read1min_binary_cave_rad_obs(file_path):
@@ -2068,7 +2068,7 @@ def read1min_binary_cave_rad_obs(file_path):
     return csza, lwu, lwd, swdif, swu, swdir, swd
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def jul2greg(xjd, mode="dtlist"):
@@ -2192,7 +2192,7 @@ def jul2greg(xjd, mode="dtlist"):
     return [[yr[i], mn[i], day[i], hr[i]] for i in smo.range(len(yr))]
 
 
-# ========================================================================
+# ==============================================================================
 
 
 def read_month_of_crs_files_validation(path, file_struc):
