@@ -1,13 +1,13 @@
 # ==============================================================================
 # This script is used for validating CRS computed surface fluxes against surface
-# radiation measurements from ARM, BSRN, SURFRAD, etc.
+# radiation measurements from ARM, BSRN, SURFRAD, Buoys, etc.
 #
-# In particular, this script isolates CERES FOVs within 10 km of the surface
-# validation sites (listed in sites.txt) and output the results to text files.
-# The resultant output files are used by <name.py> to match the surface
-# observations to the time of the CERES FOV.
+# This script isolates all CERES FOVs located within 10 km of the surface
+# validation sites listed in sites.txt, and output the data to text files.
+# The output files are used by CRS_validation2.py to extract the surface
+# observations at the time of the CERES FOV.
 #
-# Author: Ryan Scott
+# Author: Ryan Scott, SSAI
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
 

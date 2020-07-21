@@ -1,11 +1,12 @@
 # ==============================================================================
-# This script is used for validating CRS computed surface fluxes against surface
-# radiation measurements from ARM, BSRN, SURFRAD, etc.
+# This script is used for validating CRS-computed surface fluxes against surface
+# radiation measurements from ARM, BSRN, SURFRAD, Buoys, etc.
 #
-# In particular, this script extracts surface observations coincident in time
-# with the CERES FOV and outputs the results to text files.
+# This script isolates and extracts surface radiation measurements at various
+# surface sites coincident in time with the CERES FOV and outputs the combined
+# data to text files.
 #
-# Author: Ryan Scott
+# Author: Ryan Scott, SSAI
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
 
@@ -25,7 +26,17 @@ crs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
            'Extracted_FOVs/' + satellite + '/'
 
 
-def plot_ts_scatplots(site_name):
+def time_series_and_scatterplots(location):
+    """
+    ----------------------------------------------------------------------------
+    This function plots two figures per site showing (i) scatterplots of the
+    observed versus computed downward LW and SW fluxes and (ii) time series
+    of the data and the corresponding fluxes from CRS.
+    ----------------------------------------------------------------------------
+    :param location: 3-letter site identifier [str]
+    :return: plots
+    ----------------------------------------------------------------------------
+    """
     # scatter plots
     plt.figure(figsize=(12, 7))
     plt.subplot(1, 2, 1)
@@ -36,7 +47,7 @@ def plot_ts_scatplots(site_name):
     plt.xlim([100, 500])
     plt.ylim([100, 500])
     plt.axis('square')
-    plt.title('Surface Validation Site: ' + site_name + '\n' +
+    plt.title('Surface Validation Site: ' + location + '\n' +
               r'LW$\downarrow$ Flux [W m$^{-2}$]')
     plt.xlabel('Surface Observed Flux')
     plt.ylabel('CRS Computed Flux')
@@ -50,14 +61,14 @@ def plot_ts_scatplots(site_name):
     plt.xlim([0, 1400])
     plt.ylim([0, 1400])
     plt.axis('square')
-    plt.title('Surface Validation Site: ' + site_name + '\n' +
+    plt.title('Surface Validation Site: ' + location + '\n' +
               r'SW$\downarrow$ Flux [W m$^{-2}$]')
     plt.xlabel('Surface Observed Flux')
     plt.ylabel('CRS Computed Flux')
     plt.grid()
     plt.show()
 
-    # LW time series
+    # LWd time series
     plt.figure(figsize=(12, 7))
     plt.subplot(2, 1, 1)
     plt.plot(site_lwd)
@@ -66,10 +77,10 @@ def plot_ts_scatplots(site_name):
     plt.xticks(ticks=range(0, 44640, 1440), labels=xticklabels, fontsize=10)
     plt.grid()
     plt.ylabel(r'LW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.title('Surface Validation Site: ' + site_name)
+    plt.title('Surface Validation Site: ' + location)
     plt.legend(['obs', 'CRS'])
 
-    # SW time series
+    # SWd time series
     plt.subplot(2, 1, 2)
     plt.plot(site_swd)
     plt.plot(inst_ind, fov_swd, 'o')
@@ -80,12 +91,13 @@ def plot_ts_scatplots(site_name):
     plt.ylabel(r'SW$\downarrow$ Flux [W m$^{-2}$]')
     plt.show()
 
+
 # ==============================================================================
 # For every site with surface radiation measurements during "yr_mon"
-# i)   read the binary surface radiation data,
-# ii)  read in the .txt file of the CRS FOVs near the site,
-# iii) extract surface data coincident in time with the CRS FOVs
-# iv)  write to new file the matched data
+# i)   read the binary surface radiation data
+# ii)  read the .txt file of the CRS FOVs near the site
+# iii) extract surface obs coincident in time with the CRS FOVs
+# iv)  write the matched data to a new file
 # ==============================================================================
 
 
@@ -196,10 +208,10 @@ for obs_file in os.listdir(obs_path):
 
         # range of indices centered on the instantaneous match
         # for extracting/averaging the SW data
-        # print('Instantaneous - 15:', inst_ind - 15)
-        # print('Instantaneous + 15:', inst_ind + 15)
+        # print('Instantaneous - 7:', inst_ind - 7)
+        # print('Instantaneous + 7:', inst_ind + 7)
 
-        ind_range = list(zip(inst_ind - 5, inst_ind + 5))
+        ind_range = list(zip(inst_ind - 7, inst_ind + 7))
         # print(ind_range)
 
         sw_ind = []
@@ -207,7 +219,7 @@ for obs_file in os.listdir(obs_path):
         obs_mu0 = np.empty([len(obs_lwd)])
         for i, el in enumerate(ind_range):
             sw_ind[:] = range(el[0], el[1], 1)
-            # print(sw_ind)
+            print('SW indices used:', sw_ind)
             obs_swd[i] = np.nanmean(site_swd[sw_ind])
             obs_mu0[i] = np.nanmean(site_csza[sw_ind])
 
@@ -227,7 +239,7 @@ for obs_file in os.listdir(obs_path):
         print('FOV cos(SZA):\n', fov_mu0)
 
         # plot time series and scatter plots for each site
-        plot_ts_scatplots(site_name)
+        # time_series_and_scatterplots(site_name)
 
         # output FOV and site information to file
         new_file = site_name+'_'+'CRS+OBS_' + satellite + '-' + flight_model + '_' + yr_mon + '.txt'

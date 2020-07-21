@@ -2,13 +2,13 @@
 # This script is used for validating CRS computed surface fluxes against surface
 # radiation measurements from ARM, BSRN, SURFRAD, etc.
 #
-# This script is used for creating scatter plots & histograms of the difference
-# between computed surface fluxes and observed fluxes as a function of site type
-# and day/night.
+# This script reads files produced by running CRS_validation2.py and creates
+# scatter plots & histograms of the difference between computed and observed
+# fluxes as a function of site/surface type, stratified by daytime/nighttime.
 #
-# Type 1 = CST, 2 = DES, 3 = ISL, 4 = CON, 5 = POL, 6 = BUO
+# Site Types: 1 = CST, 2 = DES, 3 = ISL, 4 = CON, 5 = POL, 6 = BUO
 #
-# Author: Ryan Scott
+# Author: Ryan Scott, SSAI
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
 
@@ -24,14 +24,15 @@ from palettable.colorbrewer.sequential import BuPu_9
 
 
 day = True
-satellite = 'Terra'
-flight_model = 'FM1'
+satellite = 'Aqua'
+flight_model = 'FM3'
 yr_mon = 'JAN 2019'
-surface_type = 1
-site_desc = 'Island Sites'
+surface_type = 0
+site_desc = 'All Sites'
 
-crs_obs_path = obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
-                          'FOVs_combined_with_OBS/' + satellite + '/'
+crs_obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
+               'FOVs_combined_with_OBS/' + satellite + '/'
+
 
 # count the number of sites of "surface_type"
 count = 0
@@ -63,10 +64,10 @@ for site_file in os.listdir(crs_obs_path):
         site_lons.append(site_lon)
 
         # if the site is of the correct type, append the
-        # data contents to the list containing "all_data"
+        # data contents to the list containing "all_data"...
         # to consider all sites together, set the
         # surface_type = 0 and use != on the next line...
-        if site_type == surface_type:
+        if site_type != surface_type:
             count += 1
 
             next(file)
@@ -83,8 +84,8 @@ site_lats = np.asarray(site_lats, dtype=np.float)
 site_lons = np.asarray(site_lons, dtype=np.float)
 site_ids = np.asarray(site_ids, dtype=np.int)
 
-print('Site latitudes:', site_lats)
-print('Site longitudes:', site_lons)
+print('Site Latitudes:', site_lats)
+print('Site Longitudes:', site_lons)
 print('Site IDs:', site_ids)
 
 # cmap = ceres.set_colormap(BuPu_9, typ_arg=1)
@@ -154,11 +155,11 @@ obs_lwd = np.asarray(obs_lwd, dtype=np.float)
 
 # consider daytime (T) or nighttime (F) only
 if day is True:
-    day_str = 'Day'
+    day_str = 'Daytime'
     fov_lwd[fov_sza > 90] = np.nan
     fov_swd[fov_sza > 90] = np.nan
 elif day is False:
-    day_str = 'Night'
+    day_str = 'Nighttime'
     fov_lwd[fov_sza < 90] = np.nan
     fov_swd[fov_sza < 90] = np.nan
 
@@ -172,7 +173,8 @@ print('Number of SW comparisons:', num_sw_comparisons)
 lw_diff = fov_lwd - obs_lwd
 lw_mean_bias = np.nanmean(lw_diff)
 lw_rms_diff = np.sqrt(np.nanmean(lw_diff**2))
-lw_corr = ma.corrcoef(ma.masked_invalid(fov_lwd), ma.masked_invalid(obs_lwd))[0][1]
+lw_corr = ma.corrcoef(ma.masked_invalid(fov_lwd),
+                      ma.masked_invalid(obs_lwd))[0][1]
 
 sw_diff = fov_swd - obs_swd
 sw_mean_bias = np.nanmean(sw_diff)
@@ -184,7 +186,11 @@ sw_corr = ma.corrcoef(ma.masked_invalid(fov_swd),
 # LW
 # ==============================================================================
 
-if surface_type == 5:
+
+if surface_type == 0:
+    min_lwd = 0
+    max_lwd = 550
+elif surface_type == 5:
     min_lwd = 0
     max_lwd = 400
 else:
@@ -236,10 +242,11 @@ fig.add_trace(
             symbol='circle',
             opacity=0.8,
             color='white',
-            size=4,
+            size=3,
             line=dict(width=1)
-        )
-    ), row=1, col=2)
+            )
+        ),
+    row=1, col=2)
 
 bin_size = (max_lwd-min_lwd)/32
 
@@ -249,7 +256,7 @@ fig.add_trace(
         y=fov_lwd,
         colorscale='BuPu',
         zauto=False,
-        zmax=6,
+        zmax=15,
         xbins=dict(
             start=min_lwd,
             end=max_lwd,
@@ -307,9 +314,9 @@ fig.update_layout(
 
 fig.show()
 
-fig.write_image('/Users/rcscott2/Desktop/CRS_validation_figs/'
+fig.write_image('/Users/rcscott2/Desktop/CRS/CRS_validation/CRS_validation_figs/'
                 + satellite + '-' + flight_model +
-                '-' + site_desc[0:5] + '-JAN-2019-' + day_str + '_LW.pdf',
+                '-' + site_desc[0:3] + '-JAN-2019-' + day_str + '_LW.pdf',
                 width=1400, height=700)
 
 
@@ -336,12 +343,12 @@ fig.add_trace(
     ), row=1, col=1)
 
 fig.update_xaxes(
-    title_text="Downwelling SW Flux Difference (CRS - OBS) [W m<sup>-2</sup>]",
+    title_text='Downwelling SW Flux Difference (CRS - OBS) [W m<sup>-2</sup>]',
     range=[-125, 125],
     row=1, col=1)
 
 fig.update_yaxes(
-    title_text="Fraction of Comparisons in Bin",
+    title_text='Fraction of Comparisons in Bin',
     row=1, col=1)
 
 fig.add_trace(
@@ -363,7 +370,7 @@ fig.add_trace(
             symbol='circle',
             opacity=0.8,
             color='white',
-            size=4,
+            size=3,
             line=dict(width=1)
         )
     ), row=1, col=2)
@@ -415,7 +422,8 @@ fig.update_yaxes(
 fig.update_layout(
     title_text='CERES ' + satellite + ' ' + flight_model +
                ' CRS Ed4 Surface Validation - ' +
-               yr_mon + ' - ' + site_desc, height=700,
+               yr_mon + ' - ' + site_desc + ' - ' + day_str,
+    height=700,
     plot_bgcolor='white',
     xaxis=dict(
         showline=True,
@@ -433,9 +441,9 @@ fig.show()
 
 if day is True:
     fig.write_image(
-        '/Users/rcscott2/Desktop/CRS_validation_figs/' +
+        '/Users/rcscott2/Desktop/CRS/CRS_validation/CRS_validation_figs/' +
         satellite + '-' + flight_model +
-        '-' + site_desc[0:5] + '-JAN-2019-' + day_str + '_SW.pdf',
+        '-' + site_desc[0:3] + '-JAN-2019-' + day_str + '_SW.pdf',
         width=1400, height=700
     )
 
