@@ -2011,7 +2011,7 @@ def global_map(lon, lat, field,
 
 
 # ==============================================================================
-# SSF VALIDATION FUNCTIONS
+# CRS/SSF VALIDATION FUNCTIONS
 
 
 def read1min_binary_cave_rad_obs(file_path):
@@ -2256,6 +2256,87 @@ def read_month_of_crs_files_validation(path, file_struc):
                     file_path=file_path,
                     var_name='Longwave flux - downward - total sky',
                     lev_arg=5,
+                    fill=False)
+
+            len_tot.append(lat.shape[0])
+
+            lat_all = np.concatenate((lat_all, lat), axis=None)
+            lon_all = np.concatenate((lon_all, lon), axis=None)
+            tim_all = np.concatenate((tim_all, tim), axis=None)
+            sza_all = np.concatenate((sza_all, sza), axis=None)
+            swd_all = np.concatenate((swd_all, swd), axis=None)
+            lwd_all = np.concatenate((lwd_all, lwd), axis=None)
+
+    print(len_tot)
+    print(lat_all.shape)
+
+    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
+
+
+# ==============================================================================
+
+
+def read_month_of_ssf_files_validation(path, file_struc):
+    """
+    ----------------------------------------------------------------------------
+    This function loops over an entire month of CRS data files and reads all
+    relevant variables.
+    ----------------------------------------------------------------------------
+    :param path: path to files
+    :param file_struc: file structure (without the day & hr portion at the end)
+    :return: lon, lat, sza, time, variables
+    ----------------------------------------------------------------------------
+    """
+    import numpy as np
+
+    print('============================================')
+    print('\tReading CRS Files...\t\t\t')
+    print('============================================')
+
+    len_tot = []
+    sza_all = np.empty([])
+    lat_all = np.empty([])
+    lon_all = np.empty([])
+    tim_all = np.empty([])
+    swd_all = np.empty([])
+    lwd_all = np.empty([])
+
+    for d in range(1, 32, 1):
+        if d < 10:
+            d = '0' + str(d)
+
+        for k in range(24):
+            if k < 10:
+                k = '0' + str(k)
+
+            file = file_struc + str(d) + str(k)
+
+            # skip missing data files... edit as needed
+            # otherwise their absence would break the loop
+            # if file == 'CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019011615':
+            #     continue
+            #
+            # if file == 'CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019013117':
+            #     continue
+
+            file_path = path + file
+            print(file_path)
+
+            lat, lon, tim, sza \
+                = read_ssf_geolocation(file_path)
+
+            swd, _, _ = \
+                read_ssf_var(
+                    file_path=file_path,
+                    var_name='CERES downward SW surface flux - Model B',
+                    index=-1,
+                    fill=False)
+
+            lwd, _, _ = \
+                read_ssf_var(
+                    file_path=file_path,
+                    var_name='CERES downward LW surface flux - Model B',
+                    index=-1,
                     fill=False)
 
             len_tot.append(lat.shape[0])
