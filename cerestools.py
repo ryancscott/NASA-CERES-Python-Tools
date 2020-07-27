@@ -8,10 +8,10 @@
 #
 # Purpose:  This library contains Python 3 functions to read, process, analyze
 #           and visualize data from NASA's Clouds & the Earth's Radiant Energy
-#           System (CERES) satellite mission. Functions are included to work
+#           System (CERES) satellite mission. Functions are provided to work
 #           with Level 2 swath data & Level 3 time-interpolated and spatially-
-#           averaged (TISA) gridded fields. This library is under development
-#           for data product development purposes (*_dev) and analysis of
+#           averaged (TISA) gridded data. This library is under development
+#           for data product development purposes (*_dev) and the analysis of
 #           official release CERES data products. See function descriptions
 #           below for more information.
 #
@@ -71,10 +71,13 @@
 # plot_time_series            <- plot time series of field
 # compute_linear_trend        <- calculate linear trend - UNDER CONSTRUCTION
 # =====================
-# Validation
+#      VALIDATION
 # =====================
-# read_binary_cave_rad_obs    <- read data from D. Rutan's CAVE: ARM, BSRN, etc
-# jul2greg                    <- convert Julian time to Gregorian yr, mon, etc.
+# read1min_binary_rad_obs     <- read data from D. Rutan's CAVE: ARM, BSRN, etc
+# jul2greg                    <- convert Julian time to Gregorian yr, mon, etc
+# haversine                   <- compute distance between pts on sphere
+# read_ssf_files_validation   <- read month of SSF data, multiple variables
+# read_crs_files_validation   <- read month of CRS data, multiple variables
 # ==============================================================================
 
 
@@ -772,8 +775,7 @@ def set_colormap(cmap_name, typ_arg):
 
 # ==============================================================================
 
-
-def plot_swath(lon, lat, field,
+def plot_swath(lon, lat, field, csize,
                varname, levname, varunits,
                nrows, ncols, cen_lon,
                cmap, cmap_lims, date, nightshade,
@@ -786,6 +788,7 @@ def plot_swath(lon, lat, field,
     :param lon: FOV longitude               [float]
     :param lat: FOV latitude                [float]
     :param field: variable                  [float]
+    :param csize: scatter circle size       [int]
     :param varname: variable name           [string]
     :param levname: level name              [string]
     :param varunits: variable units         [string]
@@ -833,7 +836,7 @@ def plot_swath(lon, lat, field,
                        edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
-        #ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
+        # ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
         ax.set_global()
         ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
@@ -846,7 +849,7 @@ def plot_swath(lon, lat, field,
     # To use a different colorbar range each time, use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
-        im = axgr[i].scatter(lon, lat, c=field, s=1, transform=ccrs.PlateCarree(),
+        im = axgr[i].scatter(lon, lat, c=field, s=csize, transform=ccrs.PlateCarree(),
                              vmin=limits[0], vmax=limits[1], cmap=cmap)
         axgr.cbar_axes[i].colorbar(im)
 
@@ -2014,7 +2017,7 @@ def global_map(lon, lat, field,
 # CRS/SSF VALIDATION FUNCTIONS
 
 
-def read1min_binary_cave_rad_obs(file_path):
+def read1min_binary_rad_obs(file_path):
     """
     ----------------------------------------------------------------------------
     This function reads minute-resolution surface radiation flux data from
@@ -2195,11 +2198,12 @@ def jul2greg(xjd, mode="dtlist"):
 # ==============================================================================
 
 
-def read_month_of_crs_files_validation(path, file_struc):
+def read_crs_files_validation(path, file_struc):
     """
     ----------------------------------------------------------------------------
-    This function loops over an entire month of CRS data files and reads all
-    relevant variables.
+    This function loops over an entire month's worth of CRS files and reads all
+    variables necessary to validate CRS-computed radiative fluxes against
+    surface observations.
     ----------------------------------------------------------------------------
     :param path: path to files
     :param file_struc: file structure (without the day & hr portion at the end)
@@ -2213,12 +2217,14 @@ def read_month_of_crs_files_validation(path, file_struc):
     print('============================================')
 
     len_tot = []
-    sza_all = np.empty([])
-    lat_all = np.empty([])
-    lon_all = np.empty([])
-    tim_all = np.empty([])
-    swd_all = np.empty([])
-    lwd_all = np.empty([])
+    sza_all = np.empty([])  # solar zenith angle
+    lat_all = np.empty([])  # latitude
+    lon_all = np.empty([])  # longitude
+    tim_all = np.empty([])  # julian time
+    swd_all = np.empty([])  # SW down
+    lwd_all = np.empty([])  # LW down
+    cf1_all = np.empty([])  # cloud fraction 1
+    cf2_all = np.empty([])  # cloud fraction 2
 
     for d in range(1, 32, 1):
         if d < 10:
@@ -2231,7 +2237,7 @@ def read_month_of_crs_files_validation(path, file_struc):
             file = file_struc + str(d) + str(k)
 
             # skip missing data files... edit as needed
-            # otherwise their absence would break the loop
+            # otherwise, their absence would break the loop
             if file == 'CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019011615':
                 continue
 
@@ -2249,14 +2255,28 @@ def read_month_of_crs_files_validation(path, file_struc):
                     file_path=file_path,
                     var_name='Shortwave flux - downward - total sky',
                     lev_arg=5,
-                    fill=False)
+                    fill=True)
 
             lwd, _, _, _ = \
                 read_crs_var_dev(
                     file_path=file_path,
                     var_name='Longwave flux - downward - total sky',
                     lev_arg=5,
-                    fill=False)
+                    fill=True)
+
+            cf1, _, _, _ = \
+                read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Cloud fraction',
+                    lev_arg=0,
+                    fill=True)
+
+            cf2, _, _, _ = \
+                read_crs_var_dev(
+                    file_path=file_path,
+                    var_name='Cloud fraction',
+                    lev_arg=1,
+                    fill=True)
 
             len_tot.append(lat.shape[0])
 
@@ -2266,21 +2286,25 @@ def read_month_of_crs_files_validation(path, file_struc):
             sza_all = np.concatenate((sza_all, sza), axis=None)
             swd_all = np.concatenate((swd_all, swd), axis=None)
             lwd_all = np.concatenate((lwd_all, lwd), axis=None)
+            cf1_all = np.concatenate((cf1_all, cf1), axis=None)
+            cf2_all = np.concatenate((cf2_all, cf2), axis=None)
 
     print(len_tot)
     print(lat_all.shape)
 
-    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
+    return lon_all, lat_all, tim_all, sza_all, \
+        swd_all, lwd_all, cf1_all, cf2_all
 
 
 # ==============================================================================
 
 
-def read_month_of_ssf_files_validation(path, file_struc):
+def read_ssf_files_validation(path, file_struc):
     """
     ----------------------------------------------------------------------------
-    This function loops over an entire month of CRS data files and reads all
-    relevant variables.
+    This function loops over an entire month's worth of SSF files and reads all
+    variables necessary for validating SSF Model B radiative fluxes against
+    observations.
     ----------------------------------------------------------------------------
     :param path: path to files
     :param file_struc: file structure (without the day & hr portion at the end)
@@ -2330,14 +2354,14 @@ def read_month_of_ssf_files_validation(path, file_struc):
                     file_path=file_path,
                     var_name='CERES downward SW surface flux - Model B',
                     index=-1,
-                    fill=False)
+                    fill=True)
 
             lwd, _, _ = \
                 read_ssf_var(
                     file_path=file_path,
                     var_name='CERES downward LW surface flux - Model B',
                     index=-1,
-                    fill=False)
+                    fill=True)
 
             len_tot.append(lat.shape[0])
 
@@ -2383,8 +2407,6 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
 
     dist_km = (r * c) / 1000.0  # output distance in kilometers
     dist_km = round(dist_km, 3)
-
-    # print(f"Distance: {km} km")
 
     return dist_km
 
