@@ -855,8 +855,7 @@ def plot_swath(lon, lat, field, csize,
 
     for i, cax in enumerate(axgr.cbar_axes):
         cax.set_yticks(np.linspace(limits[0], limits[1], 5))
-        cax.set_yticklabels(np.linspace(limits[0], limits[1], 5),
-                            fontsize=8)
+        cax.set_yticklabels(np.linspace(limits[0], limits[1], 5), fontsize=8)
 
     plt.show()
     return
@@ -2068,6 +2067,24 @@ def read1min_binary_rad_obs(file_path):
     swdir = data[5, :]  # SW direct flux  (Normal Incidence Pyrheliometer)
     swd = data[6, :]    # SW down flux    (Unshaded Pyranometer)
 
+    # import matplotlib.pyplot as plt
+    # plt.figure(figsize=(12, 7))
+    # plt.subplot(7, 1, 1)
+    # plt.plot(csza)
+    # plt.subplot(7, 1, 2)
+    # plt.plot(lwu)
+    # plt.subplot(7, 1, 3)
+    # plt.plot(lwd)
+    # plt.subplot(7, 1, 4)
+    # plt.plot(swdif)
+    # plt.subplot(7, 1, 5)
+    # plt.plot(swu)
+    # plt.subplot(7, 1, 6)
+    # plt.plot(swdir)
+    # plt.subplot(7, 1, 7)
+    # plt.plot(swd)
+    # plt.show()
+
     return csza, lwu, lwd, swdif, swu, swdir, swd
 
 
@@ -2324,6 +2341,8 @@ def read_ssf_files_validation(path, file_struc):
     tim_all = np.empty([])
     swd_all = np.empty([])
     lwd_all = np.empty([])
+    cf1_all = np.empty([])
+    cf2_all = np.empty([])
 
     for d in range(1, 32, 1):
         if d < 10:
@@ -2337,11 +2356,11 @@ def read_ssf_files_validation(path, file_struc):
 
             # skip missing data files... edit as needed
             # otherwise their absence would break the loop
-            # if file == 'CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019011615':
-            #     continue
-            #
-            # if file == 'CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019013117':
-            #     continue
+            if file == 'CER_SSF_Aqua-FM3-MODIS_Edition4A_405405.2019011615':
+                continue
+
+            if file == 'CER_SSF_Terra-FM1-MODIS_Edition4A_405405.2019013117':
+                continue
 
             file_path = path + file
             print(file_path)
@@ -2363,6 +2382,20 @@ def read_ssf_files_validation(path, file_struc):
                     index=-1,
                     fill=True)
 
+            cf1, _, _ = \
+                read_ssf_var(
+                    file_path=file_path,
+                    var_name='Clear/layer/overlap percent coverages',
+                    index=1,  # clear, low cloud, high cloud, overlap
+                    fill=True)
+
+            cf2, _, _ = \
+                read_ssf_var(
+                    file_path=file_path,
+                    var_name='Clear/layer/overlap percent coverages',
+                    index=2,  # clear, low cloud, high cloud, overlap
+                    fill=True)
+
             len_tot.append(lat.shape[0])
 
             lat_all = np.concatenate((lat_all, lat), axis=None)
@@ -2371,11 +2404,14 @@ def read_ssf_files_validation(path, file_struc):
             sza_all = np.concatenate((sza_all, sza), axis=None)
             swd_all = np.concatenate((swd_all, swd), axis=None)
             lwd_all = np.concatenate((lwd_all, lwd), axis=None)
+            cf1_all = np.concatenate((cf1_all, cf1), axis=None)
+            cf2_all = np.concatenate((cf2_all, cf2), axis=None)
 
     print(len_tot)
     print(lat_all.shape)
 
-    return lon_all, lat_all, tim_all, sza_all, swd_all, lwd_all
+    return lon_all, lat_all, tim_all, sza_all, \
+        swd_all, lwd_all, cf1_all, cf2_all
 
 
 # ==============================================================================
@@ -2384,8 +2420,14 @@ def read_ssf_files_validation(path, file_struc):
 def haversine(cer_lat, cer_lon, site_lat, site_lon):
     """
     -------------------------------------------------------------------
-    Function calculates the distance between CERES FOVs and
-    the surface validation site using the haversine formula
+    This function calculates the distance between CERES FOVs and
+    surface validation sites using the haversine formula
+    -------------------------------------------------------------------
+    :param cer_lat: CERES FOV latitude    [float]
+    :param cer_lon: CERES FOV longitude   [float]
+    :param site_lat: Site latitude        [float]
+    :param site_lon: Site longitude       [float]
+    :return: Distance [km]                [float]
     -------------------------------------------------------------------
     """
     import math
@@ -2393,7 +2435,7 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
     lon1, lon2 = cer_lon, site_lon
     lat1, lat2 = cer_lat, site_lat
 
-    r = 6371000.  # radius of Earth in meters
+    r = 6371000.  # radius of Earth [meters]
     phi_1 = math.radians(cer_lat)
     phi_2 = math.radians(site_lat)
 
@@ -2413,3 +2455,48 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
 
 # ==============================================================================
 
+
+def validation_sites(lon, lat, field, title_str, date_str, cmap):
+    """
+    -------------------------------------------------------------------
+    This function plots a map of the surface sites used for validation
+    of footprint-level flux products (CRS, SSF, FLASHFlux).
+    -------------------------------------------------------------------
+    :param lon: Site Longitude
+    :param lat: Site Latitude
+    :param field: Site IDs
+    :param title_str: title string
+    :param date_str: date string
+    :param cmap: colormap
+    :return: Map of the surface validation sites
+    -------------------------------------------------------------------
+    """
+
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+
+    fig = plt.figure(figsize=(11, 6))
+
+    ax = fig.add_subplot(1, 1, 1, projection=ccrs.Robinson())
+    ax.set_global()
+    ax.stock_img()
+    # ax.coastlines()
+
+    labels = ('Coastal', 'Desert', 'Island', 'Continental', 'Polar', 'Buoy')
+    if date_str == '':
+        ax.set_title(title_str, fontsize=10)
+    else:
+        ax.set_title(title_str + ' - ' + date_str, fontsize=10)
+
+    h = ax.scatter(lon, lat, c=field, s=25, cmap=cmap,
+                   vmin=1, vmax=6, transform=ccrs.PlateCarree(),
+                   zorder=1, alpha=0.99, edgecolors='grey')
+
+    leg = ax.legend(*h.legend_elements(num=6), loc='upper right', fontsize=6)
+    for i, typ in enumerate(labels):
+        leg.get_texts()[i].set_text(labels[i])
+
+    plt.show()
+
+
+# ==============================================================================
