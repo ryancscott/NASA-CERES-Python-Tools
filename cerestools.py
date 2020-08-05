@@ -2456,7 +2456,7 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
 # ==============================================================================
 
 
-def validation_sites(lon, lat, field, title_str, date_str, cmap):
+def validation_sites(lon, lat, type_ids, title_str, date_str, cmap):
     """
     -------------------------------------------------------------------
     This function plots a map of the surface sites used for validation
@@ -2482,13 +2482,26 @@ def validation_sites(lon, lat, field, title_str, date_str, cmap):
     ax.stock_img()
     # ax.coastlines()
 
-    labels = ('Coastal', 'Desert', 'Island', 'Continental', 'Polar', 'Buoy')
+    labels = []
+    if 1 in type_ids:
+        labels.append('Coastal')
+    if 2 in type_ids:
+        labels.append('Desert')
+    if 3 in type_ids:
+        labels.append('Island')
+    if 4 in type_ids:
+        labels.append('Continental')
+    if 5 in type_ids:
+        labels.append('Polar')
+    if 6 in type_ids:
+        labels.append('Buoy')
+
     if date_str == '':
         ax.set_title(title_str, fontsize=10)
     else:
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
 
-    h = ax.scatter(lon, lat, c=field, s=25, cmap=cmap,
+    h = ax.scatter(lon, lat, c=type_ids, s=20, cmap=cmap,
                    vmin=1, vmax=6, transform=ccrs.PlateCarree(),
                    zorder=1, alpha=0.99, edgecolors='grey')
 
