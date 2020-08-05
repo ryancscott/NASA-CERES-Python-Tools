@@ -1,6 +1,6 @@
 # ==============================================================================
 # This script is used for validating CRS-computed surface fluxes against surface
-# radiation measurements from ARM, BSRN, SURFRAD, Buoys, etc.
+# radiation measurements from ARM, BSRN, SURFRAD, etc.
 #
 # This script isolates and extracts surface radiation measurements at various
 # surface sites coincident in time with the CERES FOV and outputs the combined
@@ -19,14 +19,15 @@ import matplotlib.pyplot as plt
 satellite = 'Aqua'
 flight_model = 'FM3'
 yr_mon = 'JAN-2019'
+prod = 'CRS4'
 
 obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
            'Surface_radiation_data/JAN-2019/'
-crs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
+crs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/_' + prod + '/' \
            'Extracted_FOVs/' + satellite + '/'
 
 
-def time_series_and_scatterplots(location):
+def site_time_series_scatterplots(location):
     """
     ----------------------------------------------------------------------------
     This function plots two figures per site showing (i) scatterplots of the
@@ -37,6 +38,24 @@ def time_series_and_scatterplots(location):
     :return: plots
     ----------------------------------------------------------------------------
     """
+    import numpy.ma as ma
+
+    lw_num = sum(~np.isnan(fov_lwd))
+    lw_diff = fov_lwd - obs_lwd
+    lw_mean_bias = np.nanmean(lw_diff)
+    lw_rms_diff = np.sqrt(np.nanmean(lw_diff**2))
+    lw_corr = ma.corrcoef(ma.masked_invalid(fov_lwd),
+                          ma.masked_invalid(obs_lwd))[0][1]
+
+    fov_swd[fov_sza > 90] = np.nan
+    obs_swd[fov_sza > 90] = np.nan
+    sw_num = sum(~np.isnan(fov_swd))
+    sw_diff = fov_swd - obs_swd
+    sw_mean_bias = np.nanmean(sw_diff)
+    sw_rms_diff = np.sqrt(np.nanmean(sw_diff**2))
+    sw_corr = ma.corrcoef(ma.masked_invalid(fov_swd),
+                          ma.masked_invalid(obs_swd))[0][1]
+
     # scatter plots
     plt.figure(figsize=(12, 7))
     plt.subplot(1, 2, 1)
@@ -50,8 +69,16 @@ def time_series_and_scatterplots(location):
     plt.title('Surface Validation Site: ' + location + '\n' +
               r'LW$\downarrow$ Flux [W m$^{-2}$]')
     plt.xlabel('Surface Observed Flux')
-    plt.ylabel('CRS Computed Flux')
+    plt.ylabel(prod+' Computed Flux')
     plt.grid()
+
+    # show basic descriptive statistics
+    lw_text_str = "N = " + str(lw_num) + "\n" + \
+                  r"Bias ($\bar{\Delta}$) = " + str(np.around(lw_mean_bias, 2)) + "\n" + \
+                  "RMSD = " + str(np.around(lw_rms_diff, 2)) + "\n" + \
+                  "Corr = " + str(np.around(lw_corr, 2))
+    props = dict(facecolor='white', alpha=0.85)
+    plt.text(100, 500, lw_text_str, fontsize=8, verticalalignment='top', bbox=props)
 
     plt.subplot(1, 2, 2)
     plt.scatter(obs_swd, fov_swd)
@@ -64,8 +91,15 @@ def time_series_and_scatterplots(location):
     plt.title('Surface Validation Site: ' + location + '\n' +
               r'SW$\downarrow$ Flux [W m$^{-2}$]')
     plt.xlabel('Surface Observed Flux')
-    plt.ylabel('CRS Computed Flux')
+    plt.ylabel(prod+' Computed Flux')
     plt.grid()
+    # show basic descriptive statistics
+    sw_text_str = "N = " + str(sw_num) + "\n" + \
+                  r"Bias ($\bar{\Delta}$) = " + str(np.around(sw_mean_bias, 2)) + "\n" + \
+                  "RMSD = " + str(np.around(sw_rms_diff, 2)) + "\n" + \
+                  "Corr = " + str(np.around(sw_corr, 2))
+    props = dict(facecolor='white', alpha=0.85)
+    plt.text(10, 1400, sw_text_str, fontsize=8, verticalalignment='top', bbox=props)
     plt.show()
 
     # LWd time series
@@ -78,7 +112,7 @@ def time_series_and_scatterplots(location):
     plt.grid()
     plt.ylabel(r'LW$\downarrow$ Flux [W m$^{-2}$]')
     plt.title('Surface Validation Site: ' + location)
-    plt.legend(['obs', 'CRS'])
+    plt.legend(['obs', prod])
 
     # SWd time series
     plt.subplot(2, 1, 2)
@@ -116,8 +150,8 @@ for obs_file in os.listdir(obs_path):
         # read surface radiation data
         site_csza, site_lwu, site_lwd, \
             site_swdif, site_swu, site_swdir, site_swd = \
-            ceres.read1min_binary_cave_rad_obs(file_path=
-                                               os.path.join(obs_path, obs_file))
+            ceres.read1min_binary_rad_obs(file_path=
+                                          os.path.join(obs_path, obs_file))
 
         # crs file
         crs_file = site_name+'_'+satellite+'-'+flight_model+'_'+yr_mon+'.txt'
@@ -159,6 +193,8 @@ for obs_file in os.listdir(obs_path):
         fov_sza = []
         fov_swd = []
         fov_lwd = []
+        fov_cf1 = []
+        fov_cf2 = []
         # skip first two lines since they are
         # the i) site info (name, lat, lon) and
         # ii) header info describing each column
@@ -175,6 +211,8 @@ for obs_file in os.listdir(obs_path):
             fov_sza.append(el[9])
             fov_swd.append(el[10])
             fov_lwd.append(el[11])
+            fov_cf1.append(el[12])
+            fov_cf2.append(el[13])
 
         # cast as appropriate data types
         fov_year = np.asarray(fov_year, dtype=np.int)
@@ -188,6 +226,8 @@ for obs_file in os.listdir(obs_path):
         fov_sza = np.asarray(fov_sza, dtype=np.float)
         fov_swd = np.asarray(fov_swd, dtype=np.float)
         fov_lwd = np.asarray(fov_lwd, dtype=np.float)
+        fov_cf1 = np.asarray(fov_cf1, dtype=np.float)
+        fov_cf2 = np.asarray(fov_cf2, dtype=np.float)
 
         # FOV cos(SZA)
         fov_mu0 = np.cos(fov_sza * (np.pi / 180))
@@ -208,10 +248,8 @@ for obs_file in os.listdir(obs_path):
 
         # range of indices centered on the instantaneous match
         # for extracting/averaging the SW data
-        # print('Instantaneous - 7:', inst_ind - 7)
-        # print('Instantaneous + 7:', inst_ind + 7)
-
-        ind_range = list(zip(inst_ind - 7, inst_ind + 7))
+        minutes = 15
+        ind_range = list(zip(inst_ind - minutes, inst_ind + minutes))
         # print(ind_range)
 
         sw_ind = []
@@ -239,24 +277,26 @@ for obs_file in os.listdir(obs_path):
         print('FOV cos(SZA):\n', fov_mu0)
 
         # plot time series and scatter plots for each site
-        # time_series_and_scatterplots(site_name)
+        # site_time_series_scatterplots(site_name)
 
         # output FOV and site information to file
-        new_file = site_name+'_'+'CRS+OBS_' + satellite + '-' + flight_model + '_' + yr_mon + '.txt'
+        new_file = site_name+'_'+prod+'+OBS_' + satellite + '-' + flight_model + '_' + yr_mon + '.txt'
 
         # output new file for each site
         header = str(site_name) + ', ' + site_lat + ', ' + site_lon + ', ' + site_type + '\n' + \
             'year  mon day hour min   dist    fov_lat     fov_lon  ' \
-            '   fov_sza     fov_swd     obs_swd     fov_lwd     obs_lwd'
+            '   fov_sza     fov_swd     obs_swd     fov_lwd     obs_lwd' \
+            '   fov_cf1    fov_cf2'
 
-        file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/FOVs_combined_with_OBS/'
+        file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/_'+prod+'/FOVs_combined_with_OBS/'
                     + satellite + '/' + new_file, 'w')
         file.write(header)
         file.write('\n')
 
         # data to write to file
         data = [fov_year, fov_mon, fov_day, fov_hr, fov_min, fov_dist,
-                fov_lat, fov_lon, fov_sza, fov_swd, obs_swd, fov_lwd, obs_lwd]
+                fov_lat, fov_lon, fov_sza, fov_swd, obs_swd, fov_lwd,
+                obs_lwd, fov_cf1, fov_cf2]
 
         # output data to the file
         for i in range(len(fov_year)):

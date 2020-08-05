@@ -7,13 +7,17 @@
 # The output files are used by CRS_validation2.py to extract the surface
 # observations at the time of the CERES FOV.
 #
+# This script is best run on AMI while the next 2 are best run locally.
+#
 # Author: Ryan Scott, SSAI
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
 
+import sys
 import numpy as np
 import cerestools as ceres
 from palettable.colorbrewer.sequential import BuPu_9
+from palettable.cartocolors.qualitative import Bold_6
 
 # path to text file containing information about surface validation sites
 sites_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/site.txt'
@@ -51,6 +55,7 @@ for el in list_of_lists:
 # convert list(str) of lat/lon to np arrays
 val_site_lats = np.asarray(val_site_lats, dtype=np.float)
 val_site_lons = np.asarray(val_site_lons, dtype=np.float)
+val_site_type = np.asarray(val_site_type, dtype=np.int)
 
 # create a list of tuples containing site lat, lon, & name
 sites = list(zip(val_site_name, val_site_lats, val_site_lons, val_site_type))
@@ -62,27 +67,19 @@ for i, site in enumerate(sites):
     file = site[0] + '_' + satellite + '_' + date + '.txt'
     sites[i].append(file)
 
-cmap = ceres.set_colormap(BuPu_9, typ_arg=0)
-ceres.plot_swath(lon=val_site_lons,
-                 lat=val_site_lats,
-                 field=val_site_lons,
-                 varname='',
-                 levname='',
-                 varunits='',
-                 nrows=1,
-                 ncols=1,
-                 cen_lon=0,
-                 cmap=cmap,
-                 cmap_lims=(0, 1),
-                 date='',
-                 nightshade=False,
-                 date_str=date,
-                 title_str='Surface validation sites')
+cmap = ceres.set_colormap(Bold_6, typ_arg=1)
+ceres.validation_sites(lon=val_site_lons,
+                       lat=val_site_lats,
+                       field=val_site_type,
+                       title_str='CERES CAVE Surface Validation Sites',
+                       date_str='',
+                       cmap=cmap)
 
+sys.exit()
 
 # read in full month of CRS data
 fov_lon, fov_lat, fov_tim, fov_sza, fov_swd, fov_lwd = \
-    ceres.read_month_of_crs_files_validation(
+    ceres.read_crs_files_validation(
         path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
         file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901')
 
