@@ -2419,16 +2419,16 @@ def read_ssf_files_validation(path, file_struc):
 
 def haversine(cer_lat, cer_lon, site_lat, site_lon):
     """
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     This function calculates the distance between CERES FOVs and
     surface validation sites using the haversine formula
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     :param cer_lat: CERES FOV latitude    [float]
     :param cer_lon: CERES FOV longitude   [float]
     :param site_lat: Site latitude        [float]
     :param site_lon: Site longitude       [float]
     :return: Distance [km]                [float]
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     """
     import math
 
@@ -2458,18 +2458,18 @@ def haversine(cer_lat, cer_lon, site_lat, site_lon):
 
 def validation_sites(lon, lat, type_ids, title_str, date_str, cmap):
     """
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     This function plots a map of the surface sites used for validation
     of footprint-level flux products (CRS, SSF, FLASHFlux).
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     :param lon: Site Longitude
     :param lat: Site Latitude
-    :param field: Site IDs
+    :param type_ids: Site IDs
     :param title_str: title string
     :param date_str: date string
     :param cmap: colormap
     :return: Map of the surface validation sites
-    -------------------------------------------------------------------
+    ----------------------------------------------------------------------------
     """
 
     import matplotlib.pyplot as plt
