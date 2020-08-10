@@ -1095,7 +1095,7 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
 # =============================================================================
 
 
-def grid_to_equal_angle_grid(grid_res, variable, lon_data,
+def grid_to_equal_angle_grid(grid_res_lat, grid_res_lon, variable, lon_data,
                              lat_data, lon_360=True):
     """
     ----------------------------------------------------------------------------
@@ -1120,15 +1120,15 @@ def grid_to_equal_angle_grid(grid_res, variable, lon_data,
 
     # resolution can be changed from 1x1 degree using
 
-    lat_bins = np.arange(-90, 90+grid_res, grid_res)        # lat: -90 to 90 deg
+    lat_bins = np.arange(-90, 90+grid_res_lat, grid_res_lat)        # lat: -90 to 90 deg
 
     if lon_360 is True:
-        lon_bins = np.arange(0, 360+grid_res, grid_res)     # lon: 0 to 360
+        lon_bins = np.arange(0, 360+grid_res_lon, grid_res_lon)     # lon: 0 to 360
     elif lon_360 is False:
-        lon_bins = np.arange(-180, 180+grid_res, grid_res)  # lon: -180 to 180
+        lon_bins = np.arange(-180, 180+grid_res_lon, grid_res_lon)  # lon: -180 to 180
 
-    print('Griding & averaging CERES footprints to ' + str(grid_res) + 'x' +
-          str(grid_res) + ' degree equal angle grid boxes...\n')
+    print('Griding & averaging CERES footprints to ' + str(grid_res_lon) + 'x' +
+          str(grid_res_lat) + ' degree equal angle grid boxes...\n')
 
     print('Lat bins:\n')
     print(lat_bins)
@@ -1158,7 +1158,7 @@ def grid_to_equal_angle_grid(grid_res, variable, lon_data,
     toc = time.time()
     print(toc - tic, 'seconds elapsed during grid_to_equal_angle_grid\n')
 
-    print('Shape of ' + str(grid_res) + 'x' + str(grid_res) + ' gridded field:')
+    print('Shape of ' + str(grid_res_lon) + 'x' + str(grid_res_lat) + ' gridded field:')
     print(gridded_stat.shape)
 
     # quick & dirty plot of the result
@@ -1169,12 +1169,18 @@ def grid_to_equal_angle_grid(grid_res, variable, lon_data,
     # might be nice to write the result to a netCDF or HDF file
     # in cases where this takes a long time to run...
 
-    if grid_res == 0.5:
-        grid_lat = np.arange(89.75, -90, -0.5)
-        grid_lon = np.arange(0.25, 360, 0.5)
-    elif grid_res == 1:
-        grid_lat = np.arange(89.5, -90, -1)
-        grid_lon = np.arange(0.5, 360, 1)
+    # if grid_res == 0.5:
+    #     grid_lat = np.arange(89.75, -90, -0.5)
+    #     grid_lon = np.arange(0.25, 360, 0.5)
+    # elif grid_res == 1:
+    #     grid_lat = np.arange(89.5, -90, -1)
+    #     grid_lon = np.arange(0.5, 360, 1)
+
+    grid_lat = np.arange(90 - grid_res_lat/2, -90, -grid_res_lat)
+    grid_lon = np.arange(0 + grid_res_lon/2, 360, grid_res_lon)
+
+    # print(grid_lat)
+    # print(grid_lon)
 
     return gridded_stat, grid_lon, grid_lat
 
