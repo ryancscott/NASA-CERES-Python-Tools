@@ -286,7 +286,7 @@ def read_crs_geolocation_dev(file_path):
     longitude = hdf.select('Longitude of CERES FOV at surface')
     fov_lon = longitude.get()
 
-    pressure_levels = hdf.select('Pressure profile')  # or 'Pressure profile'
+    pressure_levels = hdf.select('Pressure profile')  # 'Pressure levels OR profile'
     pres_levs = pressure_levels.get()
 
     time_of_obs = hdf.select("Julian Time")
@@ -508,6 +508,9 @@ def read_day_of_ssf_files(path, file_struc, variable, index, fill):
 
         file_path = path + file
         print(file_path)
+
+        if file == 'FLASH_SSF_Terra-FM1-MODIS_Version3C_232103.2020080405':
+            continue
 
         # read geolocation info from file
         lat, lon, tim, sza = read_ssf_geolocation(file_path)
@@ -775,23 +778,26 @@ def set_colormap(cmap_name, typ_arg):
 
 # ==============================================================================
 
-def plot_swath(lon, lat, field, csize,
+
+def plot_swath(lon, lat, field,
                varname, levname, varunits,
+               marker, msize,
                nrows, ncols, cen_lon,
                cmap, cmap_lims, date, nightshade,
-               date_str, title_str):
+               date_str, title_str,):
     """
     ----------------------------------------------------------------------------
-    This function plots a swath of footprint-level CERES data
-    e.g., FLASHFlux, SSF, or CRS
+    This function plots a swath of footprint-level data
+    e.g., FLASHFlux, SSF, CRS
     ----------------------------------------------------------------------------
     :param lon: FOV longitude               [float]
     :param lat: FOV latitude                [float]
     :param field: variable                  [float]
-    :param csize: scatter circle size       [int]
     :param varname: variable name           [string]
     :param levname: level name              [string]
     :param varunits: variable units         [string]
+    :param marker: marker type              []
+    :param msize: marker size               [float]
     :param nrows: number of rows            [integer]
     :param ncols: number of columns         [integer]
     :param cen_lon: central longitude       [float]
@@ -834,10 +840,11 @@ def plot_swath(lon, lat, field, csize,
     for i, ax in enumerate(axgr):
         ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
                        edgecolor='darkgrey')
+        # ax.coastlines(resolution='50m', zorder=1, edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
-        # ax.set_extent([-180, 180, -90, 90], crs=ccrs.PlateCarree())
-        ax.set_global()
+        ax.set_extent([-120, -30, 0, 45], crs=ccrs.PlateCarree())
+        # ax.set_global()
         ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
@@ -849,8 +856,9 @@ def plot_swath(lon, lat, field, csize,
     # To use a different colorbar range each time, use a tuple of tuples
     limits = cmap_lims
     for i in range(nrows * ncols):
-        im = axgr[i].scatter(lon, lat, c=field, s=csize, transform=ccrs.PlateCarree(),
-                             vmin=limits[0], vmax=limits[1], cmap=cmap)
+        im = axgr[i].scatter(lon, lat, c=field, s=msize, transform=ccrs.PlateCarree(),
+                             vmin=limits[0], vmax=limits[1], cmap=cmap,
+                             marker=marker)
         axgr.cbar_axes[i].colorbar(im)
 
     for i, cax in enumerate(axgr.cbar_axes):
@@ -864,19 +872,19 @@ def plot_swath(lon, lat, field, csize,
 # ==============================================================================
 
 
-def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
+def swath_daytime_only(var, lon, lat, sza, sza_cutoff):
     """
     ----------------------------------------------------------------------------
     This function extracts daytime footprints from a time series of CERES FOVs
     using a solar zenith angle cut-off value. Nighttime values more than the
     threshold (e.g., 90 degrees) are ignored.
     ----------------------------------------------------------------------------
-    :param lat: FOV latitudes                   [float]
-    :param lon: FOV longitudes                  [float]
     :param var: variable under consideration    [float]
+    :param lon: FOV longitudes                  [float]
+    :param lat: FOV latitudes                   [float]
     :param sza: FOV solar zenith angle          [float]
     :param sza_cutoff: SZA cut-off value        [float]
-    :return:
+    :return: Daytime FOVs
     ----------------------------------------------------------------------------
     """
     import numpy as np
@@ -884,38 +892,38 @@ def swath_daytime_only(lat, lon, var, sza, sza_cutoff):
     # if footprint SZA > cutoff value, ignore
     for i in range(len(sza)):
         if sza[i] >= sza_cutoff:
-            sza[i] = np.nan
             var[i] = np.nan
-            lat[i] = np.nan
             lon[i] = np.nan
+            lat[i] = np.nan
+            sza[i] = np.nan
 
     # ignore and remove NaNs
     bad_indices = np.isnan(var)
     good_indices = ~bad_indices
-    lat = lat[good_indices]
-    lon = lon[good_indices]
-    sza = sza[good_indices]
     var = var[good_indices]
+    lon = lon[good_indices]
+    lat = lat[good_indices]
+    sza = sza[good_indices]
 
-    return lat, lon, var, sza
+    return var, lon, lat, sza
 
 
 # ==============================================================================
 
 
-def swath_nighttime_only(lat, lon, var, sza, sza_cutoff):
+def swath_nighttime_only(var, lon, lat, sza, sza_cutoff):
     """
     ----------------------------------------------------------------------------
     This function extracts nighttime footprints from a time series of CERES FOVs
     using a solar zenith angle cut-off value. Daytime values less than the
     threshold (e.g., 90 degrees) are ignored.
     ----------------------------------------------------------------------------
-    :param lat: FOV latitudes                   [float]
-    :param lon: FOV longitudes                  [float]
     :param var: variable under consideration    [float]
+    :param lon: FOV longitudes                  [float]
+    :param lat: FOV latitudes                   [float]
     :param sza: FOV solar zenith angle          [float]
     :param sza_cutoff: SZA cut-off value        [float]
-    :return:
+    :return: Nighttime FOVs
     ----------------------------------------------------------------------------
     """
     import numpy as np
@@ -923,20 +931,20 @@ def swath_nighttime_only(lat, lon, var, sza, sza_cutoff):
     # if footprint SZA < cutoff value, ignore
     for i in range(len(sza)):
         if sza[i] <= sza_cutoff:
-            sza[i] = np.nan
             var[i] = np.nan
-            lat[i] = np.nan
             lon[i] = np.nan
+            lat[i] = np.nan
+            sza[i] = np.nan
 
     # ignore and remove NaNs
     bad_indices = np.isnan(var)
     good_indices = ~bad_indices
-    lat = lat[good_indices]
-    lon = lon[good_indices]
-    sza = sza[good_indices]
     var = var[good_indices]
+    lon = lon[good_indices]
+    lat = lat[good_indices]
+    sza = sza[good_indices]
 
-    return lat, lon, var, sza
+    return var, lon, lat, sza
 
 
 # ==============================================================================
@@ -1087,18 +1095,20 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
 # =============================================================================
 
 
-def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
+def grid_to_equal_angle_grid(grid_res, variable, lon_data,
+                             lat_data, lon_360=True):
     """
     ----------------------------------------------------------------------------
-    This functions bins & grids CERES footprints to a 1 deg x 1 deg equal angle
-    latitude-longitude grid using the SciPy stats routine binned_statistic_2d.
-    After FOVs are aggregated into 1 deg x 1 deg regions it computes the mean
+    This functions bins & grids CERES footprints to an equal angle lat-lon
+    grid having resolution res using the SciPy stats routine binned_statistic_2d.
+    After FOVs are aggregated into "res"x"res" deg regions it computes the mean
     of the input "variable" - alternatively, it can compute the # of footprints,
-    the median, or other statistics (including user-defined functions).
+    the median, or other statistics (based on user-defined functions).
     ----------------------------------------------------------------------------
-    :param lat_data: FOV latitude array                            [float]
+    :param grid_res: grid resolution, e.g., 1x1, 0.5x0.5, etc           [float]
+    :param variable: for which the gridded statistic is computed   [float]
     :param lon_data: FOV longitude array                           [float]
-    :param variable: for which gridded statistic will be computed  [float]
+    :param lat_data: FOV latitude array                            [float]
     :param lon_360:  use 0 to 360 or -180 to 180 longitude bins    [boolean]
     :return: the field of gridded FOVs                             [float]
     ----------------------------------------------------------------------------
@@ -1108,16 +1118,17 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     import matplotlib.pyplot as plt
     from scipy import stats
 
-    # consider generalizing and adding bins as parameters of the function?
-    lat_bins = np.arange(-90, 91)    # lat: -90 to 90 deg
+    # resolution can be changed from 1x1 degree using
+
+    lat_bins = np.arange(-90, 90+grid_res, grid_res)        # lat: -90 to 90 deg
 
     if lon_360 is True:
-        lon_bins = np.arange(0, 361)     # lon: 0 to 360
+        lon_bins = np.arange(0, 360+grid_res, grid_res)     # lon: 0 to 360
     elif lon_360 is False:
-        lon_bins = np.arange(-180, 181)  # lon: -180 to 180
+        lon_bins = np.arange(-180, 180+grid_res, grid_res)  # lon: -180 to 180
 
-    print('Griding and averaging footprints to 1 x 1',
-          'degree equal angle grid boxes...\n')
+    print('Griding & averaging CERES footprints to ' + str(grid_res) + 'x' +
+          str(grid_res) + ' degree equal angle grid boxes...\n')
 
     print('Lat bins:\n')
     print(lat_bins)
@@ -1133,7 +1144,7 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     #     print(lat_bins[lat_ind[n]-1], "<=", lat_data[n], "<", lat_bins[lat_ind[n]], '...', lat_ind[n])
     #     print(lon_bins[lon_ind[n]-1], "<=", lon_data[n], "<", lon_bins[lon_ind[n]], '...', lon_ind[n])
 
-    # start timing it
+    # time it
     tic = time.time()
 
     # compute mean in each grid box - statistics: 'count', 'mean', 'median'
@@ -1145,9 +1156,9 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
 
     # finish timing it, print relevant info
     toc = time.time()
-    print(toc - tic, 'seconds elapsed during grid_to_1x1_deg_equal_angle\n')
+    print(toc - tic, 'seconds elapsed during grid_to_equal_angle_grid\n')
 
-    print("Shape of 1 x 1 gridded field:")
+    print('Shape of ' + str(grid_res) + 'x' + str(grid_res) + ' gridded field:')
     print(gridded_stat.shape)
 
     # quick & dirty plot of the result
@@ -1158,13 +1169,20 @@ def grid_to_1x1_deg_equal_angle(lat_data, lon_data, variable, lon_360=True):
     # might be nice to write the result to a netCDF or HDF file
     # in cases where this takes a long time to run...
 
-    return gridded_stat
+    if grid_res == 0.5:
+        grid_lat = np.arange(89.75, -90, -0.5)
+        grid_lon = np.arange(0.25, 360, 0.5)
+    elif grid_res == 1:
+        grid_lat = np.arange(89.5, -90, -1)
+        grid_lon = np.arange(0.5, 360, 1)
+
+    return gridded_stat, grid_lon, grid_lat
 
 
 # =============================================================================
 
 
-def grid_to_1x1_deg_ceres_nested(lat_data, lon_data, variable, lon_360=True):
+def grid_to_1x1_deg_ceres_nested(variable, lon_data, lat_data, lon_360=True):
     """
     ----------------------------------------------------------------------------
     This functions bins & grids CERES footprints to a 1 deg x 1 deg nested
@@ -1323,7 +1341,7 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
     from cartopy.feature.nightshade import Nightshade
 
     # Map projection
-    projection = ccrs.Robinson(central_longitude=cen_lon)
+    projection = ccrs.PlateCarree(central_longitude=cen_lon)
 
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
@@ -1342,10 +1360,11 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
 
     # Loop over axes
     for i, ax in enumerate(axgr):
-        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
-                       edgecolor='darkgrey')
+        # ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
+        #                edgecolor='darkgrey')
+        ax.coastlines(resolution='50m', zorder=1, edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
-        #ax.set_extent([-180, 180, -90, 90], projection)
+        ax.set_extent([-135, -15, -20, 50], projection)
         ax.text(0.5, -0.15, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
@@ -1356,7 +1375,7 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
     # limits = (-30, 30)
     limits = cmap_lims
     for i in range((nrows * ncols)):
-        im = axgr[i].pcolor(lon, lat, field[:, :, i], transform=ccrs.PlateCarree(),
+        im = axgr[i].pcolor(lon, lat, field[:, :], transform=ccrs.PlateCarree(),
                             vmin=limits[i][0], vmax=limits[i][1], cmap=cmap)
         axgr.cbar_axes[i].colorbar(im)
         axgr[i].set_title(title_str[i], fontsize=10)
@@ -2331,7 +2350,7 @@ def read_ssf_files_validation(path, file_struc):
     import numpy as np
 
     print('============================================')
-    print('\tReading CRS Files...\t\t\t')
+    print('\tReading SSF Files...\t\t\t')
     print('============================================')
 
     len_tot = []
