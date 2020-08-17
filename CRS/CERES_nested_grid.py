@@ -19,14 +19,14 @@ terra_var_all, terra_lon_all, terra_lat_all, terra_sza_all =\
 
 terra_lon_all = ceres.swath_lon_360_to_180(lon=terra_lon_all)
 
-# terra_lat_all, terra_lon_all, terra_var_all, terra_sza_all = \
-#     ceres.swath_daytime_only(
-#         lat=terra_lat_all,
-#         lon=terra_lon_all,
-#         var=terra_var_all,
-#         sza=terra_sza_all,
-#         sza_cutoff=90
-#     )
+terra_lat_all, terra_lon_all, terra_var_all, terra_sza_all = \
+    ceres.swath_daytime_only(
+        lat=terra_lat_all,
+        lon=terra_lon_all,
+        var=terra_var_all,
+        sza=terra_sza_all,
+        sza_cutoff=90
+    )
 
 gridded_field = ceres.grid_to_1x1_deg_ceres_nested(
     lat_data=terra_lat_all,

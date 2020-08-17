@@ -6,6 +6,7 @@
 # overpass time.
 # ==========================================================================
 
+import sys
 import numpy as np
 import cerestools as ceres
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ file_path2 = path2 + file2
 
 
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='init_all_toa_sw_up',
+                                           var_name='init_clr_toa_lw_up',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -86,7 +87,7 @@ for k in range(24):
     terra_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=terra_crs_file,
-            var_name='Shortwave flux - upward - total sky',
+            var_name='Longwave flux - upward - clear sky',
             lev_arg=0,
             fill=True)
 
@@ -96,37 +97,37 @@ for k in range(24):
     aqua_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=aqua_crs_file,
-            var_name='Shortwave flux - upward - total sky',
+            var_name='Longwave flux - upward - clear sky',
             lev_arg=0,
             fill=True)
 
     terra_lon_all = ceres.swath_lon_360_to_180(terra_lon_all)
     aqua_lon_all = ceres.swath_lon_360_to_180(aqua_lon_all)
 
-    terra_lat_all, terra_lon_all, terra_var_all, terra_sza_all = \
-        ceres.swath_daytime_only(lat=terra_lat_all,
-                                 lon=terra_lon_all,
-                                 var=terra_var_all,
-                                 sza=terra_sza_all,
-                                 sza_cutoff=90)
+    terra_var_all, terra_lon_all, terra_lat_all, terra_sza_all = \
+        ceres.swath_nighttime_only(var=terra_var_all,
+                                   lon=terra_lon_all,
+                                   lat=terra_lat_all,
+                                   sza=terra_sza_all,
+                                   sza_cutoff=90)
 
-    aqua_lat_all, aqua_lon_all, aqua_var_all, aqua_sza_all = \
-        ceres.swath_daytime_only(lat=aqua_lat_all,
-                                 lon=aqua_lon_all,
-                                 var=aqua_var_all,
-                                 sza=aqua_sza_all,
-                                 sza_cutoff=90)
+    aqua_var_all, aqua_lon_all, aqua_lat_all, aqua_sza_all = \
+        ceres.swath_nighttime_only(var=aqua_var_all,
+                                   lon=aqua_lon_all,
+                                   lat=aqua_lat_all,
+                                   sza=aqua_sza_all,
+                                   sza_cutoff=90)
 
     terra_var_gridded[k, :, :] = \
-        ceres.grid_to_1x1_deg_ceres_nested(lat_data=terra_lat_all,
+        ceres.grid_to_1x1_deg_ceres_nested(variable=terra_var_all,
                                            lon_data=terra_lon_all,
-                                           variable=terra_var_all,
+                                           lat_data=terra_lat_all,
                                            lon_360=False)
 
     aqua_var_gridded[k, :, :] = \
-        ceres.grid_to_1x1_deg_ceres_nested(lat_data=aqua_lat_all,
+        ceres.grid_to_1x1_deg_ceres_nested(variable=aqua_var_all,
                                            lon_data=aqua_lon_all,
-                                           variable=aqua_var_all,
+                                           lat_data=aqua_lat_all,
                                            lon_360=False)
     print('...', k, ' ...')
 
@@ -147,7 +148,7 @@ aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
 
 
-for k in range(0):
+for k in range(1):
 
     if k < 10:
         j = '0' + str(k)
@@ -215,14 +216,13 @@ terra_diff = terra_only_mask*terra_var_gridded - terra_only_mask*var_syn1deg
 aqua_diff[terra_aqua_mask == 2] = np.nan
 terra_diff[terra_aqua_mask == 2] = np.nan
 
-#
 # fig, (ax1, ax2) = plt.subplots(2, 1)
 # ax1.hist(np.reshape(terra_diff, 24*180*360), bins=200, align='mid', rwidth=1)
 # ax2.hist(np.reshape(aqua_diff, 24*180*360), bins=200, align='mid', rwidth=1)
 # plt.show()
 
 
-for k in range(0):
+for k in range(1):
 
     if k < 10:
         j = '0' + str(k)
@@ -260,10 +260,10 @@ aqua_mean_diff = np.nanmean(aqua_diff, axis=0)
 
 # combine fields into a single matrix to loop over figure axes
 field = np.stack((terra_mean_diff, aqua_mean_diff), axis=2)
-title_str = [r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'All-Sky TOA Outgoing SW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
-             r'Mean Daytime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'All-Sky TOA Outgoing SW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
+title_str = [r'Mean Nighttime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
+             r'Mean Nighttime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
+             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
              ]
 
 
@@ -271,19 +271,21 @@ title_str = [r'Mean Daytime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\
 cmap = ceres.set_colormap(Balance_20, 0)
 
 ceres.plot_gridded_fields(nrows=2, ncols=1, cen_lon=0,
-                          date_str='', title_str=title_str,
-                          cmap=cmap, cmap_lims=((-100, 100), (-100, 100)),
+                          date_str='1-1-2019:00-23h',
+                          title_str=title_str,
+                          cmap=cmap, cmap_lims=((-30, 30), (-30, 30)),
                           varname='', levname='', varunits='',
                           lon=lon_syn1deg, lat=lat_syn1deg,
                           field=field)
 
 
 # compute regional averages
-# weights = ceres.cos_lat_weight(np.flipud(lat_syn1deg))
-# global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg = \
-# ceres.compute_regional_averages(field=terra_mean_diff,
-#                                 latitude=np.flipud(lat_syn1deg),
-#                                 weights=weights)
+weights = ceres.cos_lat_weight(np.flipud(lat_syn1deg))
+
+global_avg, sh0to30_avg, sh30to60_avg, sh60to90_avg, nh0to30_avg, nh30to60_avg, nh60to90_avg = \
+ceres.compute_regional_averages(field=terra_mean_diff,
+                                latitude=np.flipud(lat_syn1deg),
+                                weights=weights)
 
 
 # -----------------
