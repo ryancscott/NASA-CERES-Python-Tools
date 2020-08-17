@@ -843,8 +843,8 @@ def plot_swath(lon, lat, field,
         # ax.coastlines(resolution='50m', zorder=1, edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
         ax.set_title(title_str + ' - ' + date_str, fontsize=10)
-        ax.set_extent([-120, -30, 0, 45], crs=ccrs.PlateCarree())
-        # ax.set_global()
+        # ax.set_extent([-120, -30, 0, 45], crs=ccrs.PlateCarree())
+        ax.set_global()
         ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
@@ -1092,25 +1092,31 @@ def swath_histogram_scatterplot(field2, field1, var_name, lev_name,
     plt.show()
     return
 
+
 # =============================================================================
 
 
-def grid_to_equal_angle_grid(grid_res_lat, grid_res_lon, variable, lon_data,
-                             lat_data, lon_360=True):
+def grid_to_equal_angle_grid(variable,
+                             lon_data,
+                             lat_data,
+                             grid_res_lon,
+                             grid_res_lat,
+                             lon_360=True):
     """
     ----------------------------------------------------------------------------
     This functions bins & grids CERES footprints to an equal angle lat-lon
-    grid having resolution res using the SciPy stats routine binned_statistic_2d.
-    After FOVs are aggregated into "res"x"res" deg regions it computes the mean
-    of the input "variable" - alternatively, it can compute the # of footprints,
-    the median, or other statistics (based on user-defined functions).
+    grid using the SciPy stats routine binned_statistic_2d. After the FOVs are
+    aggregated into "grid_res_lon"x"grid_res_lat" regions, it computes the mean
+    of the input "variable". Alternatively, it can compute the # of footprints,
+    the median, or other statistics (calculated with user-defined functions).
     ----------------------------------------------------------------------------
-    :param grid_res: grid resolution, e.g., 1x1, 0.5x0.5, etc           [float]
-    :param variable: for which the gridded statistic is computed   [float]
+    :param variable: for which a gridded statistic is computed     [float]
     :param lon_data: FOV longitude array                           [float]
     :param lat_data: FOV latitude array                            [float]
+    :param grid_res_lon: grid resolution, longitude                [float]
+    :param grid_res_lat: grid resolution, latitude                 [float]
     :param lon_360:  use 0 to 360 or -180 to 180 longitude bins    [boolean]
-    :return: the field of gridded FOVs                             [float]
+    :return: the field of gridded footprints                       [float]
     ----------------------------------------------------------------------------
     """
     import time
@@ -1118,10 +1124,10 @@ def grid_to_equal_angle_grid(grid_res_lat, grid_res_lon, variable, lon_data,
     import matplotlib.pyplot as plt
     from scipy import stats
 
-    # resolution can be changed from 1x1 degree using
-
+    # latitude bins
     lat_bins = np.arange(-90, 90+grid_res_lat, grid_res_lat)        # lat: -90 to 90 deg
 
+    # longitude bins
     if lon_360 is True:
         lon_bins = np.arange(0, 360+grid_res_lon, grid_res_lon)     # lon: 0 to 360
     elif lon_360 is False:
@@ -1166,21 +1172,14 @@ def grid_to_equal_angle_grid(grid_res_lat, grid_res_lon, variable, lon_data,
     # plt.colorbar()
     # plt.show()
 
-    # might be nice to write the result to a netCDF or HDF file
-    # in cases where this takes a long time to run...
-
-    # if grid_res == 0.5:
-    #     grid_lat = np.arange(89.75, -90, -0.5)
-    #     grid_lon = np.arange(0.25, 360, 0.5)
-    # elif grid_res == 1:
-    #     grid_lat = np.arange(89.5, -90, -1)
-    #     grid_lon = np.arange(0.5, 360, 1)
-
+    # set up the grid of longitude and latitude grid boxes
+    grid_lon = np.arange(0 + grid_res_lon / 2, 360, grid_res_lon)
     grid_lat = np.arange(90 - grid_res_lat/2, -90, -grid_res_lat)
-    grid_lon = np.arange(0 + grid_res_lon/2, 360, grid_res_lon)
+    print('Longitude grid:', grid_lon)
+    print('Latitude grid:', grid_lat)
 
-    # print(grid_lat)
-    # print(grid_lon)
+    # might be nice to write the result to a netCDF or HDF file
+    # for cases where this takes a long time to run...
 
     return gridded_stat, grid_lon, grid_lat
 
@@ -1312,6 +1311,98 @@ def grid_to_1x1_deg_ceres_nested(variable, lon_data, lat_data, lon_360=True):
 # =============================================================================
 
 
+def plot_gridded_field(nrows, ncols, cen_lon,
+                        date_str, title_str,
+                        cmap, cmap_lims,
+                        varname, levname, varunits,
+                        lon, lat, field,
+                        itr):
+    """
+    ----------------------------------------------------------------------------
+    This function provides a framework for plotting multiple different gridded
+    fields.
+    ----------------------------------------------------------------------------
+    :param nrows: number of rows
+    :param ncols: number of columns
+    :param cen_lon: central longitude
+    :param date_str: date string
+    :param title_str: title string
+    :param cmap: colormap
+    :param cmap_lims: colormap limits
+    :param varname: variable name
+    :param levname: level name
+    :param varunits: variable units
+    :param lon: longitude
+    :param lat: latitude
+    :param field: variable to plot
+    ----------------------------------------------------------------------------
+    :return: plot of the data
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy.feature
+    from mpl_toolkits.axes_grid1 import AxesGrid
+    from cartopy.mpl.geoaxes import GeoAxes
+    from cartopy.feature.nightshade import Nightshade
+    import matplotlib.patches as mpatches
+
+    # Map projection
+    projection = ccrs.PlateCarree(central_longitude=cen_lon)
+
+    # Axis class
+    axes_class = (GeoAxes, dict(map_projection=projection))
+
+    # Create figure
+    fig = plt.figure(figsize=(10, 8))
+    axgr = AxesGrid(fig, 111,
+                    axes_class=axes_class,
+                    nrows_ncols=(nrows, ncols),
+                    axes_pad=(0, 0),
+                    share_all=True,
+                    cbar_location='right',
+                    cbar_mode='each',
+                    cbar_pad=0.1,
+                    cbar_size='5%',
+                    label_mode=1)
+
+    # Loop over axes
+    for i, ax in enumerate(axgr):
+        # ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
+        #                edgecolor='darkgrey')
+        ax.coastlines(resolution='50m', zorder=2, edgecolor='darkgrey')
+        ax.stock_img()
+        ax.gridlines(color='grey', linestyle='--', zorder=1)
+        ax.set_extent([-135, -15, -20, 50], projection)
+        # ax.set_global()
+        ax.text(0.5, -0.1, varname + ' - ' + levname + '\n' + varunits,
+                va='bottom', ha='center',
+                rotation='horizontal', rotation_mode='anchor',
+                transform=ax.transAxes, fontsize=10)
+        ax.add_patch(mpatches.Rectangle(xy=[-81., 24.75], width=6.5, height=5.5,
+                                        edgecolor='red',
+                                        facecolor='none',
+                                        alpha=0.7,
+                                        zorder=3,
+                                        transform=ccrs.PlateCarree())
+                     )
+
+    # limits = (-30, 30)
+    limits = cmap_lims
+    for i in range((nrows * ncols)):
+        im = axgr[i].pcolor(lon, lat, field, transform=ccrs.PlateCarree(),
+                            vmin=limits[0], vmax=limits[1], cmap=cmap)
+        axgr.cbar_axes[i].colorbar(im)
+        axgr[i].set_title(title_str, fontsize=10)
+
+    # plt.show()
+    plt.savefig('/Users/rcscott2/Desktop/TS_Isaias/' + str(itr) + '_Terra_OLR_bdry.pdf', bbox_inches='tight')
+    return
+
+
+# ==============================================================================
+
+
 def plot_gridded_fields(nrows, ncols, cen_lon,
                         date_str, title_str,
                         cmap, cmap_lims,
@@ -1345,16 +1436,18 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
     from mpl_toolkits.axes_grid1 import AxesGrid
     from cartopy.mpl.geoaxes import GeoAxes
     from cartopy.feature.nightshade import Nightshade
+    # import matplotlib.patches as mpatches
 
     # Map projection
-    projection = ccrs.PlateCarree(central_longitude=cen_lon)
+    projection = ccrs.Robinson(central_longitude=cen_lon)
 
     # Axis class
     axes_class = (GeoAxes, dict(map_projection=projection))
 
     # Create figure
     fig = plt.figure(figsize=(10, 8))
-    axgr = AxesGrid(fig, 111, axes_class=axes_class,
+    axgr = AxesGrid(fig, 111,
+                    axes_class=axes_class,
                     nrows_ncols=(nrows, ncols),
                     axes_pad=(0.4, 0.6),
                     share_all=True,
@@ -1366,32 +1459,33 @@ def plot_gridded_fields(nrows, ncols, cen_lon,
 
     # Loop over axes
     for i, ax in enumerate(axgr):
-        # ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
-        #                edgecolor='darkgrey')
-        ax.coastlines(resolution='50m', zorder=1, edgecolor='darkgrey')
+        ax.add_feature(cartopy.feature.LAND, zorder=1, facecolor='none',
+                       edgecolor='darkgrey')
         ax.gridlines(color='grey', linestyle='--')
-        ax.set_extent([-135, -15, -20, 50], projection)
+        ax.set_global()
+        # ax.coastlines(resolution='50m', zorder=1, edgecolor='darkgrey')
+        # ax.stock_img()
+        # ax.set_extent([-135, -15, -20, 50], projection)
         ax.text(0.5, -0.15, varname + ' - ' + levname + '\n' + varunits,
                 va='bottom', ha='center',
                 rotation='horizontal', rotation_mode='anchor',
                 transform=ax.transAxes, fontsize=10)
 
-    # To use a different color bar range each time use a tuple of tuples
-    #        = ((0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120), (0, 120))
-    # limits = (-30, 30)
+    # To use a different color bar range each time use a tuple of tuples, e.g.
+    #        = ((0, 120), (0, 120), (0, 120))
     limits = cmap_lims
     for i in range((nrows * ncols)):
-        im = axgr[i].pcolor(lon, lat, field[:, :], transform=ccrs.PlateCarree(),
+        im = axgr[i].pcolor(lon, lat, field[:, :, i], transform=ccrs.PlateCarree(),
                             vmin=limits[i][0], vmax=limits[i][1], cmap=cmap)
         axgr.cbar_axes[i].colorbar(im)
         axgr[i].set_title(title_str[i], fontsize=10)
 
     plt.show()
+    # plt.savefig('/Users/rcscott2/Desktop/' + str(itr) + '_Aqua_SW.pdf', bbox_inches='tight')
     return
 
 
 # ==============================================================================
-
 
 def read_syn1deg_hdf(file_path, var_name, fill):
     """
