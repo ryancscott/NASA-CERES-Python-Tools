@@ -16,15 +16,15 @@ import numpy as np
 import cerestools as ceres
 import matplotlib.pyplot as plt
 
-satellite = 'Aqua'
-flight_model = 'FM3'
+satellite = 'Terra'
+flight_model = 'FM1'
 yr_mon = 'JAN-2019'
-prod = 'CRS4'
+prod = 'FF4A_test'
 
 obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
            'Surface_radiation_data/JAN-2019/'
 crs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/_' + prod + '/' \
-           'Extracted_FOVs/' + satellite + '/'
+           'Extracted_FOVs/' + yr_mon + '/' + satellite + '/'
 
 
 def site_time_series_scatterplots(location):
@@ -40,15 +40,38 @@ def site_time_series_scatterplots(location):
     """
     import numpy.ma as ma
 
-    lw_num = sum(~np.isnan(fov_lwd))
-    lw_diff = fov_lwd - obs_lwd
-    lw_mean_bias = np.nanmean(lw_diff)
-    lw_rms_diff = np.sqrt(np.nanmean(lw_diff**2))
-    lw_corr = ma.corrcoef(ma.masked_invalid(fov_lwd),
-                          ma.masked_invalid(obs_lwd))[0][1]
+    # LW daytime only
+    fov_lwd_day = fov_lwd[fov_sza < 90]
+    obs_lwd_day = obs_lwd[fov_sza < 90]
 
+    # LW nighttime only
+    fov_lwd_ngt = fov_lwd[fov_sza > 90]
+    obs_lwd_ngt = obs_lwd[fov_sza > 90]
+
+    print('FOV_LWD shape:', fov_lwd.shape)
+    print('FOV_LWD day shape:', fov_lwd_day.shape)
+    print('FOV_LWD ngt shape:', fov_lwd_ngt.shape)
+
+    # LW stats - daytime
+    lw_num_day = sum(~np.isnan(fov_lwd_day))
+    lw_diff_day = fov_lwd_day - obs_lwd_day
+    lw_mean_bias_day = np.nanmean(lw_diff_day)
+    lw_rms_diff_day = np.sqrt(np.nanmean(lw_diff_day**2))
+    lw_corr_day = ma.corrcoef(ma.masked_invalid(fov_lwd_day),
+                              ma.masked_invalid(obs_lwd_day))[0][1]
+    # LW stats - nighttime
+    lw_num_ngt = sum(~np.isnan(fov_lwd_ngt))
+    lw_diff_ngt = fov_lwd_ngt - obs_lwd_ngt
+    lw_mean_bias_ngt = np.nanmean(lw_diff_ngt)
+    lw_rms_diff_ngt = np.sqrt(np.nanmean(lw_diff_ngt ** 2))
+    lw_corr_ngt = ma.corrcoef(ma.masked_invalid(fov_lwd_ngt),
+                              ma.masked_invalid(obs_lwd_ngt))[0][1]
+
+    # SW - daytime
     fov_swd[fov_sza > 90] = np.nan
     obs_swd[fov_sza > 90] = np.nan
+
+    # SW stats - daytime
     sw_num = sum(~np.isnan(fov_swd))
     sw_diff = fov_swd - obs_swd
     sw_mean_bias = np.nanmean(sw_diff)
@@ -57,50 +80,74 @@ def site_time_series_scatterplots(location):
                           ma.masked_invalid(obs_swd))[0][1]
 
     # scatter plots
-    plt.figure(figsize=(12, 7))
-    plt.subplot(1, 2, 1)
-    plt.scatter(obs_lwd, fov_lwd)
+    plt.figure(figsize=(9, 8))
+    plt.rcParams['axes.axisbelow'] = True
+    plt.suptitle(yr_mon[:3] + ' ' + yr_mon[-4:] + '\n' + prod + ' ' + satellite + ' ' + flight_model +
+                 '\n Surface Validation Site: ' + location)
+
+    plt.subplot(2, 2, 1)
+    plt.grid(zorder=0)
+    plt.scatter(obs_lwd_day, fov_lwd_day, c=obs_lwd_day, cmap='cividis', s=12, zorder=3)
     x = np.linspace(100, 500, 100)
-    y = x
-    plt.plot(x, y)
+    plt.plot(x, x)
     plt.xlim([100, 500])
     plt.ylim([100, 500])
     plt.axis('square')
-    plt.title('Surface Validation Site: ' + location + '\n' +
-              r'LW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.xlabel('Surface Observed Flux')
-    plt.ylabel(prod+' Computed Flux')
-    plt.grid()
-
+    plt.ylabel(prod + r' Computed LW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
+    plt.xlabel(r'Surface Measured LW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
     # show basic descriptive statistics
-    lw_text_str = "N = " + str(lw_num) + "\n" + \
-                  r"Bias ($\bar{\Delta}$) = " + str(np.around(lw_mean_bias, 2)) + "\n" + \
-                  "RMSD = " + str(np.around(lw_rms_diff, 2)) + "\n" + \
-                  "Corr = " + str(np.around(lw_corr, 2))
+    lw_text_str_day = "Daytime \n" + "N = " + str(lw_num_day) + "\n" + \
+                      r"Bias ($\bar{\Delta}$) = " + str(np.around(lw_mean_bias_day, 2)) + "\n" + \
+                      "RMSD = " + str(np.around(lw_rms_diff_day, 2)) + "\n" + \
+                      "Corr = " + str(np.around(lw_corr_day, 2))
     props = dict(facecolor='white', alpha=0.85)
-    plt.text(100, 500, lw_text_str, fontsize=8, verticalalignment='top', bbox=props)
+    plt.text(100, 500, lw_text_str_day, fontsize=8, verticalalignment='top', bbox=props)
 
-    plt.subplot(1, 2, 2)
-    plt.scatter(obs_swd, fov_swd)
-    x2 = np.linspace(0, 1400, 100)
-    y2 = x2
-    plt.plot(x2, y2)
-    plt.xlim([0, 1400])
-    plt.ylim([0, 1400])
+    plt.subplot(2, 2, 2)
+    plt.scatter(obs_swd, fov_swd, c=obs_swd, cmap='plasma', s=12, zorder=3)
+    x2 = np.linspace(0, 1200, 100)
+    plt.plot(x2, x2)
+    plt.xlim([0, 1200])
+    plt.ylim([0, 1200])
     plt.axis('square')
-    plt.title('Surface Validation Site: ' + location + '\n' +
-              r'SW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.xlabel('Surface Observed Flux')
-    plt.ylabel(prod+' Computed Flux')
-    plt.grid()
+    plt.xlabel(r'Surface Measured SW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
+    plt.ylabel(prod+r' Computed SW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
+    plt.grid(zorder=0)
     # show basic descriptive statistics
-    sw_text_str = "N = " + str(sw_num) + "\n" + \
+    sw_text_str = "Daytime \n" + "N = " + str(sw_num) + "\n" + \
                   r"Bias ($\bar{\Delta}$) = " + str(np.around(sw_mean_bias, 2)) + "\n" + \
                   "RMSD = " + str(np.around(sw_rms_diff, 2)) + "\n" + \
                   "Corr = " + str(np.around(sw_corr, 2))
     props = dict(facecolor='white', alpha=0.85)
-    plt.text(10, 1400, sw_text_str, fontsize=8, verticalalignment='top', bbox=props)
-    plt.show()
+    plt.text(10, 1200, sw_text_str, fontsize=8, verticalalignment='top', bbox=props)
+
+    plt.subplot(2, 2, 3)
+    plt.scatter(obs_lwd_ngt, fov_lwd_ngt, c=obs_lwd_ngt, cmap='cividis', s=12, zorder=3)
+    x3 = np.linspace(100, 500, 10)
+    plt.plot(x3, x3)
+    plt.xlim([100, 500])
+    plt.ylim([100, 500])
+    plt.axis('square')
+    plt.xlabel(r'Surface Measured LW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
+    plt.ylabel(prod + r' Computed LW$\downarrow$ Flux [W m$^{-2}$]', fontsize=9)
+    plt.grid(zorder=0)
+    # show basic descriptive statistics
+    lw_text_str_ngt = "Nighttime \n" + "N = " + str(lw_num_ngt) + "\n" + \
+                      r"Bias ($\bar{\Delta}$) = " + str(np.around(lw_mean_bias_ngt, 2)) + "\n" + \
+                      "RMSD = " + str(np.around(lw_rms_diff_ngt, 2)) + "\n" + \
+                      "Corr = " + str(np.around(lw_corr_ngt, 2))
+    props = dict(facecolor='white', alpha=0.85)
+    plt.text(100, 500, lw_text_str_ngt, fontsize=8, verticalalignment='top', bbox=props)
+
+    plt.savefig(
+        '/Users/rcscott2/Desktop/CRS/CRS_validation/_' + prod + '/Validation_figs/Site_figs/' +
+        satellite + '-' + flight_model +
+        '-' + location + '-JAN-2019-' + '1' + '.pdf',
+        width=1400, height=700)
+
+    #plt.show()
+
+    # =================================================
 
     # LWd time series
     plt.figure(figsize=(12, 7))
@@ -111,7 +158,8 @@ def site_time_series_scatterplots(location):
     plt.xticks(ticks=range(0, 44640, 1440), labels=xticklabels, fontsize=10)
     plt.grid()
     plt.ylabel(r'LW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.title('Surface Validation Site: ' + location)
+    plt.title(yr_mon[:3] + ' ' + yr_mon[-4:] + '\n' + prod + ' ' + satellite + ' ' + flight_model +
+                 '\n Surface Validation Site: ' + location)
     plt.legend(['obs', prod])
 
     # SWd time series
@@ -123,8 +171,14 @@ def site_time_series_scatterplots(location):
     plt.grid()
     plt.xlabel('Day of Month')
     plt.ylabel(r'SW$\downarrow$ Flux [W m$^{-2}$]')
-    plt.show()
 
+    plt.savefig(
+        '/Users/rcscott2/Desktop/CRS/CRS_validation/_' + prod + '/Validation_figs/Site_figs/' +
+        satellite + '-' + flight_model +
+        '-' + location + '-JAN-2019-' + '2' + '.pdf',
+        width=1400, height=700)
+
+    #plt.show()
 
 # ==============================================================================
 # For every site with surface radiation measurements during "yr_mon"
@@ -154,7 +208,7 @@ for obs_file in os.listdir(obs_path):
                                           os.path.join(obs_path, obs_file))
 
         # crs file
-        crs_file = site_name+'_'+satellite+'-'+flight_model+'_'+yr_mon+'.txt'
+        crs_file = site_name+'_'+prod+'_'+satellite+'-'+flight_model+'_'+yr_mon+'.txt'
 
         # path to CRS FOVs extracted over surface sites
         crs_file_path = crs_path + crs_file
@@ -220,6 +274,7 @@ for obs_file in os.listdir(obs_path):
         fov_day = np.asarray(fov_day, dtype=np.int)
         fov_hr = np.asarray(fov_hr, dtype=np.int)
         fov_min = np.asarray(fov_min, dtype=np.int)
+        fov_sec = np.asarray(fov_sec, dtype=np.int)
         fov_lat = np.asarray(fov_lat, dtype=np.float)
         fov_lon = np.asarray(fov_lon, dtype=np.float)
         fov_dist = np.asarray(fov_dist, dtype=np.float)
@@ -277,24 +332,24 @@ for obs_file in os.listdir(obs_path):
         print('FOV cos(SZA):\n', fov_mu0)
 
         # plot time series and scatter plots for each site
-        # site_time_series_scatterplots(site_name)
+        site_time_series_scatterplots(site_name)
 
         # output FOV and site information to file
         new_file = site_name+'_'+prod+'+OBS_' + satellite + '-' + flight_model + '_' + yr_mon + '.txt'
 
         # output new file for each site
         header = str(site_name) + ', ' + site_lat + ', ' + site_lon + ', ' + site_type + '\n' + \
-            'year  mon day hour min   dist    fov_lat     fov_lon  ' \
+            'year  mon day hour min  sec  dist    fov_lat     fov_lon  ' \
             '   fov_sza     fov_swd     obs_swd     fov_lwd     obs_lwd' \
             '   fov_cf1    fov_cf2'
 
         file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/_'+prod+'/FOVs_combined_with_OBS/'
-                    + satellite + '/' + new_file, 'w')
+                    + yr_mon + '/' + satellite + '/' + new_file, 'w')
         file.write(header)
         file.write('\n')
 
         # data to write to file
-        data = [fov_year, fov_mon, fov_day, fov_hr, fov_min, fov_dist,
+        data = [fov_year, fov_mon, fov_day, fov_hr, fov_min, fov_sec, fov_dist,
                 fov_lat, fov_lon, fov_sza, fov_swd, obs_swd, fov_lwd,
                 obs_lwd, fov_cf1, fov_cf2]
 
