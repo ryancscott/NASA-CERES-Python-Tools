@@ -10,12 +10,12 @@
 #           and visualize data from NASA's Clouds & the Earth's Radiant Energy
 #           System (CERES) satellite mission. Functions are provided to work
 #           with Level 2 swath data & Level 3 time-interpolated and spatially-
-#           averaged (TISA) gridded data. This library is under development
-#           for data product development purposes (*_dev) and the analysis of
-#           official release CERES data products. See function descriptions
-#           below for more information.
+#           averaged (TISA) gridded fields. This library is under development
+#           for data product development purposes (*_dev) and analysis of
+#           officially released CERES data products. See list of functions and
+#           their descriptions below for more information.
 #
-# To Use:   import cerestools as ceres
+# Usage:   import cerestools as ceres
 #
 # Requires: numpy, scipy, matplotlib, netcdf4, pyhdf, cartopy, datetime, &
 #           palettable. I recommend installing these libraries using conda,
@@ -24,7 +24,7 @@
 # Author:   Ryan C. Scott, SSAI
 #           ryan.c.scott@nasa.gov
 #
-# Last Updated: June 1, 2020
+# Last Updated: August 25, 2020
 #
 # This code conforms to Python PEP-8 coding standards.
 # ==============================================================================
@@ -244,7 +244,7 @@ def read_crs_geolocation(file_path):
     longitude = hdf.select('Longitude of CERES FOV at surface')
     fov_lon = longitude.get()
 
-    pressure_levels = hdf.select('Pressure levels')
+    pressure_levels = hdf.select('Pressure profile')
     pres_levs = pressure_levels.get()
 
     time_of_obs = hdf.select("Time of observation")
@@ -510,6 +510,7 @@ def read_day_of_ssf_files(path, file_struc, variable, index, fill):
         print(file_path)
 
         if file == 'FLASH_SSF_Terra-FM1-MODIS_Version3C_232103.2020080405':
+            print('Missing file: ', file)
             continue
 
         # read geolocation info from file
@@ -784,7 +785,7 @@ def plot_swath(lon, lat, field,
                marker, msize,
                nrows, ncols, cen_lon,
                cmap, cmap_lims, date, nightshade,
-               date_str, title_str,):
+               date_str, title_str):
     """
     ----------------------------------------------------------------------------
     This function plots a swath of footprint-level data
@@ -865,7 +866,10 @@ def plot_swath(lon, lat, field,
         cax.set_yticks(np.linspace(limits[0], limits[1], 5))
         cax.set_yticklabels(np.linspace(limits[0], limits[1], 5), fontsize=8)
 
+    plt.tight_layout()
+
     plt.show()
+    # plt.savefig('/Users/rcscott2/Desktop/OLR-'+str(iter)+'.png')
     return
 
 
