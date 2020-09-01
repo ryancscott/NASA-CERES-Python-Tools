@@ -7,13 +7,12 @@ import sys
 import numpy as np
 import cerestools as ceres
 
-
 # cmocean
 from palettable.cmocean.sequential import Deep_20_r
 from palettable.cmocean.diverging import Balance_20
 from palettable.cmocean.sequential import Thermal_20
 # scientific
-from palettable.scientific.sequential import LaJolla_20_r
+from palettable.scientific.sequential import LaJolla_20
 from palettable.scientific.sequential import LaPaz_20
 from palettable.scientific.sequential import Nuuk_20
 from palettable.scientific.sequential import Acton_20
@@ -55,46 +54,46 @@ from palettable.colorbrewer.sequential import BuPu_9_r
 
 # ==========================================================================
 #
-# Daily plots of OLR
+# Daily plots of OLR or LWd
 
-# for day in range(7):
-#
-#     olr, lon, lat, sza = \
-#         ceres.read_day_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
-#                                     file_struc='CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019010'+str(day+1),
-#                                     variable='Longwave flux - upward - total sky',
-#                                     lev_arg=0,
-#                                     fill=True)
-#
-#     olr, lon, lat, sza = ceres.swath_daytime_only(olr, lon, lat, sza, 90)
-#
-#     olr_colormap = ceres.set_colormap(cmap_name=Thermal_20, typ_arg=0)
-#     ceres.plot_swath(lon=lon, lat=lat, field=olr, nrows=1, ncols=1, cen_lon=0,
-#                      varname='Emitted Longwave Radiation', levname='TOA', varunits='Watts per square meter',
-#                      cmap=olr_colormap, cmap_lims=(150, 350),
-#                      date='2019010'+str(day+1), date_str='01/0'+str(day+1)+'/2019:00-23h',
-#                      nightshade=False, title_str='CERES Aqua FM3 CRS',
-#                      marker='o', msize=0.5)
+for day in range(6):
+
+    olr, lon, lat, sza = \
+        ceres.read_day_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
+                                    file_struc='CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019010'+str(day+1),
+                                    variable='Longwave flux - downward - total sky',
+                                    lev_arg=5,
+                                    fill=True)
+
+    olr, lon, lat, _ = ceres.swath_daytime_only(olr, lon, lat, sza, 90)
+
+    olr_colormap = ceres.set_colormap(cmap_name=LaJolla_20, typ_arg=0)
+    ceres.plot_swath(lon=lon, lat=lat, field=olr, nrows=1, ncols=1, cen_lon=0,
+                     varname='Incoming Longwave Radiation', levname='Surface', varunits='Watts per square meter',
+                     cmap=olr_colormap, cmap_lims=(100, 450),
+                     date='2019010'+str(day+1), date_str='01/0'+str(day+1)+'/2019:00-23h',
+                     nightshade=False, title_str='CERES Aqua FM3 CRS',
+                     marker='o', msize=0.5)
 
 # ==========================================================================
 #
-# Daily plots of RSW
+# Daily plots of RSW or SWd
 
-# for day in range(7):
+# for day in range(6):
 #
-#     olr, lon, lat, sza = \
+#     rsw, lon, lat, sza = \
 #         ceres.read_day_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
 #                                     file_struc='CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.2019010'+str(day+1),
-#                                     variable='Longwave flux - upward - total sky',
-#                                     lev_arg=0,
+#                                     variable='Shortwave flux - downward - total sky',
+#                                     lev_arg=5,
 #                                     fill=True)
 #
-#     olr, lon, lat, sza = ceres.swath_daytime_only(olr, lon, lat, sza, 90)
+#     rsw, lon, lat, _ = ceres.swath_daytime_only(rsw, lon, lat, sza, 86.5)
 #
-#     olr_colormap = ceres.set_colormap(cmap_name=Thermal_20, typ_arg=0)
-#     ceres.plot_swath(lon=lon, lat=lat, field=olr, nrows=1, ncols=1, cen_lon=0,
-#                      varname='Emitted Longwave Radiation', levname='TOA', varunits='Watts per square meter',
-#                      cmap=olr_colormap, cmap_lims=(150, 350),
+#     rsw_colormap = ceres.set_colormap(cmap_name=LaPaz_20, typ_arg=0)
+#     ceres.plot_swath(lon=lon, lat=lat, field=rsw, nrows=1, ncols=1, cen_lon=0,
+#                      varname='Incoming Shortwave Radiation', levname='Surface', varunits='Watts per square meter',
+#                      cmap=rsw_colormap, cmap_lims=(0, 1000),
 #                      date='2019010'+str(day+1), date_str='01/0'+str(day+1)+'/2019:00-23h',
 #                      nightshade=False, title_str='CERES Aqua FM3 CRS',
 #                      marker='o', msize=0.5)
@@ -105,51 +104,59 @@ from palettable.colorbrewer.sequential import BuPu_9_r
 #
 # ==========================================================================
 
-
-# var_all2, lon_all2, lat_all2, sza_all2 = \
-#     ceres.read_day_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
-#                                 file_struc='CER_CRS4_Aqua-FM3-MODIS_GH4_1111TH.20190101',
-#                                 variable='Longwave flux - upward - total sky',
-#                                 lev_arg=0,
-#                                 fill=True)
+# for day in range(6):
+#
+#     var_all2, lon_all2, lat_all2, sza_all2 = \
+#         ceres.read_day_of_crs_files(
+#             path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
+#             file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.2019010'+
+#                        str(day+1),
+#             variable='Shortwave flux - upward - total sky',
+#             lev_arg=0, fill=True)
 #
 # # CERES SW TOA flux - upwards
 # # CERES downward SW surface flux - Model B
 # # CERES LW TOA flux - upwards
 # # CERES downward LW surface flux - Model B
 #
-# var_all1, lon_all1, lat_all1, sza_all1 = \
-#     ceres.read_day_of_ssf_files(path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
-#                                 file_struc='CER_SSF_Aqua-FM3-MODIS_Edition4A_404405.20190101',
-#                                 variable='CERES LW TOA flux - upwards',
-#                                 index=-1,
-#                                 fill=True)
+#     var_all1, lon_all1, lat_all1, sza_all1 = \
+#         ceres.read_day_of_ssf_files(
+#             path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
+#             file_struc='CER_SSF_Terra-FM1-MODIS_Edition4A_404405.2019010' +
+#                         str(day+1),
+#             variable='CERES SW TOA flux - upwards',
+#             index=-1, fill=True)
 #
-# # computes var_all3 minus var_all4
-# diff = ceres.swath_difference(field2=var_all2, field1=var_all1, day_only=False, sza=sza_all2)
-#
-#
-# diff_colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
-#
-#
-# ceres.plot_swath(lon=lon_all2, lat=lat_all2, field=diff, nrows=1, ncols=1, cen_lon=0,
-#                  varname='Longwave flux - upward - total sky', levname='TOA', varunits='Watts per square meter',
-#                  cmap=diff_colormap, cmap_lims=(-40, 40), date='20190101', date_str='01/01/2019:00-23h',
-#                  nightshade=False, title_str='Aqua FM3 CERES CRS (computed) minus SSF Ed4A (observed)',
-#                  marker='o', msize=1)
-#
-#
-# ceres.swath_histogram_scatterplot(field2=var_all2,
+#     # computes var_all2 minus var_all1
+#     diff = ceres.swath_difference(field2=var_all2,
 #                                   field1=var_all1,
-#                                   var_name='Longwave flux - upward - total sky',
-#                                   lev_name='TOA',
-#                                   ti_str1='SSF observed',
-#                                   ti_str2='CRS computed',
-#                                   suptitle=' CRS vs SSF Ed4A',
-#                                   date_str='1-1-2019:00-23h',
-#                                   platform='Aqua FM3',
-#                                   day_only=False, sza=sza_all2)
+#                                   day=True,
+#                                   sza=sza_all2)
+#
+#     diff_colormap = ceres.set_colormap(cmap_name=Balance_20, typ_arg=0)
+#     ceres.plot_swath(
+#         lon=lon_all2, lat=lat_all2, field=diff,
+#         nrows=1, ncols=1, cen_lon=0,
+#         varname='Shortwave flux - upward - total sky',
+#         levname='TOA', varunits='Watts per square meter',
+#         cmap=diff_colormap, cmap_lims=(-100, 100),
+#         date='2019010'+str(day+1), date_str='01/0'+str(day+1)+'/2019:00-23h',
+#         nightshade=False,
+#         title_str='Daytime \n Terra FM1 CRS (computed) minus SSF Ed4A (observed)',
+#         marker='o', msize=1)
 
+    # ceres.swath_histogram_scatterplot(
+    #     field2=var_all2,
+    #     field1=var_all1,
+    #     sza=sza_all2,
+    #     var_name='Shortwave flux - upward - total sky',
+    #     lev_name='TOA',
+    #     f1_str='SSF observed',
+    #     f2_str='CRS computed',
+    #     main_title=' CRS vs SSF Ed4A',
+    #     date_str='1-1-2019:00-23h',
+    #     platform='Terra FM1',
+    #     day=False)
 
 # ==========================================================================
 #
@@ -261,30 +268,33 @@ from palettable.colorbrewer.sequential import BuPu_9_r
 #                  cmap=lw_colormap, cmap_lims=(0, 1000), date='20190101', date_str='01/01/2019:00-23h',
 #                  nightshade=False, title_str='CERES Terra-FM1 SSF Ed4A parameterized', marker='o', msize=1)
 
-
-var_all2, lon_all2, lat_all2, sza_all2 = \
-    ceres.read_month_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
-                                  file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901',
-                                  variable='Longwave flux - upward - total sky',
-                                  lev_arg=0,
-                                  fill=True)
-
-var_all1, lon_all1, lat_all1, sza_all1 = \
-    ceres.read_month_of_ssf_files(path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
-                                  file_struc='CER_SSF_Terra-FM1-MODIS_Edition4A_404405.201901',
-                                  variable='CERES LW TOA flux - upwards',
-                                  index=-1,
-                                  fill=True)
-
-
-
-ceres.swath_histogram_scatterplot(field2=var_all2,
-                                  field1=var_all1,
-                                  var_name='Longwave flux - upward - total sky',
-                                  lev_name='TOA',
-                                  ti_str1='SSF observed',
-                                  ti_str2='CRS computed',
-                                  suptitle=' CRS vs SSF Ed4A',
-                                  date_str='1/1-15/2019:00-23h',
-                                  platform='Terra FM1',
-                                  day_only=False, sza=sza_all2)
+# ==========================================================================
+#
+# Histograms and scatterplots based on the full month of data
+#
+# var_all2, lon_all2, lat_all2, sza_all2 = \
+#     ceres.read_month_of_crs_files(path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
+#                                   file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901',
+#                                   variable='Shortwave flux - upward - total sky',
+#                                   lev_arg=0,
+#                                   fill=True)
+#
+# var_all1, lon_all1, lat_all1, sza_all1 = \
+#     ceres.read_month_of_ssf_files(path='/Users/rcscott2/Desktop/CRS/ASDC_archive/SSF_Ed4A/',
+#                                   file_struc='CER_SSF_Terra-FM1-MODIS_Edition4A_404405.201901',
+#                                   variable='CERES SW TOA flux - upwards',
+#                                   index=-1,
+#                                   fill=True)
+#
+# ceres.swath_histogram_scatterplot(
+#     field2=var_all2,
+#     field1=var_all1,
+#     sza=sza_all2,
+#     var_name='Shortwave flux - upward - total sky',
+#     lev_name='TOA',
+#     f1_str='SSF observed',
+#     f2_str='CRS computed',
+#     main_title=' CRS vs SSF Ed4A',
+#     date_str='JAN 2019',
+#     platform='Terra FM1',
+#     day=True)
