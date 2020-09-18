@@ -7,8 +7,6 @@
 # The output files are used by CRS_validation2.py to extract the surface
 # observations at the time of the CERES FOV.
 #
-# This script is best run on AMI while the next 2 are best run locally.
-#
 # Author: Ryan Scott, SSAI
 #         ryan.c.scott@nasa.gov
 # ==============================================================================
@@ -16,15 +14,15 @@
 import sys
 import numpy as np
 import cerestools as ceres
-from palettable.colorbrewer.sequential import BuPu_9
 from palettable.cartocolors.qualitative import Bold_6
 
 # path to text file containing information about surface validation sites
-sites_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/site.txt'
+sites_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/sites_01-2019.txt'
 
 # satellite and date information for output files
 satellite = 'Terra-FM1'
 date = 'JAN-2019'
+prod = 'CRS'
 
 # open the validation site text file, loop over and read each line
 list_of_lists = []
@@ -64,21 +62,21 @@ sites = [list(el) for el in sites]
 
 # construct an output file for each site, add to "sites" list of lists
 for i, site in enumerate(sites):
-    file = site[0] + '_' + satellite + '_' + date + '.txt'
+    file = site[0] + '_' + prod + '_' + satellite + '_' + date + '.txt'
     sites[i].append(file)
 
 cmap = ceres.set_colormap(Bold_6, typ_arg=1)
 ceres.validation_sites(lon=val_site_lons,
                        lat=val_site_lats,
-                       field=val_site_type,
+                       type_ids=val_site_type,
                        title_str='CERES CAVE Surface Validation Sites',
                        date_str='',
                        cmap=cmap)
 
-sys.exit()
+# sys.exit()
 
 # read in full month of CRS data
-fov_lon, fov_lat, fov_tim, fov_sza, fov_swd, fov_lwd = \
+fov_lon, fov_lat, fov_tim, fov_sza, fov_swd, fov_lwd, fov_cf1, fov_cf2 = \
     ceres.read_crs_files_validation(
         path='/Users/rcscott2/Desktop/CRS/my_output/JAN-2019_/',
         file_struc='CER_CRS4_Terra-FM1-MODIS_GH4_1111TH.201901')
@@ -98,11 +96,11 @@ for site in sites:
     # header describing data in each file
     header = str(site[0]) + ', ' + str(site[1]) + ', ' + str(site[2]) + ', ' \
              + str(site[3]) + '\n' + \
-             'year  mon day hour min  sec    dist    fov_lat     fov_lon  ' \
-             '   fov_sza      fov_swd     fov_lwd '
+             'jultim  year  mon day hour min  sec    dist    fov_lat     fov_lon  ' \
+             '   fov_sza      fov_swd     fov_lwd    fov_cf1    fov_cf2 '
 
     # open site output file
-    file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/Extracted_FOVs/'+site[4], 'w')
+    file = open('/Users/rcscott2/Desktop/CRS/CRS_validation/_CRS/Extracted_FOVs/'+site[4], 'w')
     file.write(header)
     file.write('\n')
 
@@ -121,9 +119,9 @@ for site in sites:
                 ceres.jul2greg(xjd=fov_tim[i], mode="dtlist")
 
             # data to write to file
-            data = [yr, mn, day, hr, mi, sec, dist,
+            data = [fov_tim[i], yr, mn, day, hr, mi, sec, dist,
                     fov[0], fov[1], fov_sza[i], fov_swd[i],
-                    fov_lwd[i]]
+                    fov_lwd[i], fov_cf1[i], fov_cf2[i]]
 
             # output data to the file
             for el in data:

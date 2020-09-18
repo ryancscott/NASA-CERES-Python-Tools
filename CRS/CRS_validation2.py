@@ -16,10 +16,10 @@ import numpy as np
 import cerestools as ceres
 import matplotlib.pyplot as plt
 
-satellite = 'Terra'
-flight_model = 'FM1'
+satellite = 'Aqua'
+flight_model = 'FM3'
 yr_mon = 'JAN-2019'
-prod = 'FF4A_test'
+prod = 'CRS'
 
 obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/' \
            'Surface_radiation_data/JAN-2019/'
@@ -235,6 +235,7 @@ for obs_file in os.listdir(obs_path):
         print(site_type)
 
         # extract fov_* to their own list
+        fov_jtim = []
         fov_year = []
         fov_mon = []
         fov_day = []
@@ -253,22 +254,24 @@ for obs_file in os.listdir(obs_path):
         # the i) site info (name, lat, lon) and
         # ii) header info describing each column
         for el in list_of_lists[2:]:
-            fov_year.append(el[0])
-            fov_mon.append(el[1])
-            fov_day.append(el[2])
-            fov_hr.append(el[3])
-            fov_min.append(el[4])
-            fov_sec.append(el[5])
-            fov_dist.append(el[6])
-            fov_lat.append(el[7])
-            fov_lon.append(el[8])
-            fov_sza.append(el[9])
-            fov_swd.append(el[10])
-            fov_lwd.append(el[11])
-            fov_cf1.append(el[12])
-            fov_cf2.append(el[13])
+            fov_jtim.append(el[0])
+            fov_year.append(el[1])
+            fov_mon.append(el[2])
+            fov_day.append(el[3])
+            fov_hr.append(el[4])
+            fov_min.append(el[5])
+            fov_sec.append(el[6])
+            fov_dist.append(el[7])
+            fov_lat.append(el[8])
+            fov_lon.append(el[9])
+            fov_sza.append(el[10])
+            fov_swd.append(el[11])
+            fov_lwd.append(el[12])
+            fov_cf1.append(el[13])
+            fov_cf2.append(el[14])
 
         # cast as appropriate data types
+        fov_jtim = np.asarray(fov_jtim, dtype=np.float)
         fov_year = np.asarray(fov_year, dtype=np.int)
         fov_mon = np.asarray(fov_mon, dtype=np.int)
         fov_day = np.asarray(fov_day, dtype=np.int)
@@ -303,7 +306,7 @@ for obs_file in os.listdir(obs_path):
 
         # range of indices centered on the instantaneous match
         # for extracting/averaging the SW data
-        minutes = 15
+        minutes = 7
         ind_range = list(zip(inst_ind - minutes, inst_ind + minutes))
         # print(ind_range)
 
@@ -339,7 +342,7 @@ for obs_file in os.listdir(obs_path):
 
         # output new file for each site
         header = str(site_name) + ', ' + site_lat + ', ' + site_lon + ', ' + site_type + '\n' + \
-            'year  mon day hour min  sec  dist    fov_lat     fov_lon  ' \
+            'julian_time   year  mon day hour min  sec  dist    fov_lat     fov_lon  ' \
             '   fov_sza     fov_swd     obs_swd     fov_lwd     obs_lwd' \
             '   fov_cf1    fov_cf2'
 
@@ -349,7 +352,7 @@ for obs_file in os.listdir(obs_path):
         file.write('\n')
 
         # data to write to file
-        data = [fov_year, fov_mon, fov_day, fov_hr, fov_min, fov_sec, fov_dist,
+        data = [fov_jtim, fov_year, fov_mon, fov_day, fov_hr, fov_min, fov_sec, fov_dist,
                 fov_lat, fov_lon, fov_sza, fov_swd, obs_swd, fov_lwd,
                 obs_lwd, fov_cf1, fov_cf2]
 

@@ -25,17 +25,17 @@ from plotly.subplots import make_subplots
 from palettable.cartocolors.qualitative import Bold_6
 
 
-day = False
-prod = 'CRS4'
+day = True
+prod = 'CRS'
 satellite = 'Terra'
 flight_model = 'FM1'
-yr_mon = 'JAN 2019'
+yr_mon = 'JAN-2019'
 site_type = 0
 site_desc = 'All Sites'
 
 # path to files containing matched FOVs & OBS
 crs_obs_path = '/Users/rcscott2/Desktop/CRS/CRS_validation/_'+prod+'/' \
-               'FOVs_combined_with_OBS/' + satellite + '/'
+               'FOVs_combined_with_OBS/' + yr_mon + '/' + satellite + '/'
 
 # count the number of sites w/ "site_type"
 count = 0
@@ -96,20 +96,21 @@ print('Site IDs:', site_ids)
 cmap = ceres.set_colormap(Bold_6, typ_arg=1)
 ceres.validation_sites(lon=site_lons,
                        lat=site_lats,
-                       field=site_ids,
+                       type_ids=site_ids,
                        title_str='Surface Validation Sites',
                        date_str='January 2019',
                        cmap=cmap)
 
-# sys.exit()
-
+# sys.exit()  # aborts rest of script
 
 # extract fov_* to their own list
+fov_jtim = []
 fov_year = []
 fov_mon = []
 fov_day = []
 fov_hr = []
 fov_min = []
+fov_sec = []
 fov_dist = []
 fov_lat = []
 fov_lon = []
@@ -124,28 +125,32 @@ fov_cf2 = []
 # the i) site info (name, lat, lon) and
 # ii) header info describing each column
 for el in all_data:
-    fov_year.append(el[0])
-    fov_mon.append(el[1])
-    fov_day.append(el[2])
-    fov_hr.append(el[3])
-    fov_min.append(el[4])
-    fov_dist.append(el[5])
-    fov_lat.append(el[6])
-    fov_lon.append(el[7])
-    fov_sza.append(el[8])
-    fov_swd.append(el[9])
-    obs_swd.append(el[10])
-    fov_lwd.append(el[11])
-    obs_lwd.append(el[12])
-    fov_cf1.append(el[13])
-    fov_cf2.append(el[14])
+    fov_jtim.append(el[0])
+    fov_year.append(el[1])
+    fov_mon.append(el[2])
+    fov_day.append(el[3])
+    fov_hr.append(el[4])
+    fov_min.append(el[5])
+    fov_sec.append(el[6])
+    fov_dist.append(el[7])
+    fov_lat.append(el[8])
+    fov_lon.append(el[9])
+    fov_sza.append(el[10])
+    fov_swd.append(el[11])
+    obs_swd.append(el[12])
+    fov_lwd.append(el[13])
+    obs_lwd.append(el[14])
+    fov_cf1.append(el[15])
+    fov_cf2.append(el[16])
 
 # cast as appropriate data types
+fov_jtim = np.asarray(fov_jtim, dtype=np.float)
 fov_year = np.asarray(fov_year, dtype=np.int)
 fov_mon = np.asarray(fov_mon, dtype=np.int)
 fov_day = np.asarray(fov_day, dtype=np.int)
 fov_hr = np.asarray(fov_hr, dtype=np.int)
 fov_min = np.asarray(fov_min, dtype=np.int)
+fov_sec = np.asarray(fov_sec, dtype=np.int)
 fov_dist = np.asarray(fov_dist, dtype=np.float)
 fov_lat = np.asarray(fov_lat, dtype=np.float)
 fov_lon = np.asarray(fov_lon, dtype=np.float)
@@ -163,8 +168,8 @@ fov_tcf = fov_cf1 + fov_cf2
 # ================================
 
 # Clear-sky FOVs only
-# fov_lwd[fov_tcf > 0] = np.nan
-# fov_swd[fov_tcf > 0] = np.nan
+fov_lwd[fov_tcf > 0.9] = np.nan
+fov_swd[fov_tcf > 0.9] = np.nan
 
 # ================================
 
@@ -173,17 +178,25 @@ if day is True:
     day_str = 'Daytime'
     fov_lwd[fov_sza > 90] = np.nan
     fov_swd[fov_sza > 90] = np.nan
+    obs_swd[fov_sza > 90] = np.nan
+    obs_lwd[fov_sza > 90] = np.nan
 elif day is False:
     day_str = 'Nighttime'
     fov_lwd[fov_sza < 90] = np.nan
     fov_swd[fov_sza < 90] = np.nan
+    obs_swd[fov_sza < 90] = np.nan
+    obs_lwd[fov_sza < 90] = np.nan
+
+# if the surface obs are missing, don't include FOV
+fov_lwd[obs_lwd == np.nan] = np.nan
+fov_swd[obs_swd == np.nan] = np.nan
 
 # number of non-NaN values
-num_lw_comparisons = sum(~np.isnan(fov_lwd))
-num_sw_comparisons = sum(~np.isnan(fov_swd))
+# multiply them - if one is nan, it won't count
+num_lw_comparisons = sum(~np.isnan(fov_lwd*obs_lwd))
+num_sw_comparisons = sum(~np.isnan(fov_swd*obs_swd))
 print('Number of LW comparisons:', num_lw_comparisons)
 print('Number of SW comparisons:', num_sw_comparisons)
-
 
 # calculate validation statistics
 lw_diff = fov_lwd - obs_lwd
@@ -311,20 +324,25 @@ fig.add_trace(
     row=1, col=2)
 
 fig.update_xaxes(
-    title_text="Surface Observed Downwelling LW Flux [W m<sup>-2</sup>]",
+    title_text="Surface Measured Downwelling LW Flux [W m<sup>-2</sup>]",
     range=[min_lwd, max_lwd],
     row=1, col=2)
+
+if prod == 'CRS':
+    yaxislabel = 'CRS Computed'
+else:
+    yaxislabel = prod + ' Parameterized'
 
 fig.update_yaxes(
-    title_text=prod+' Downwelling LW Flux [W m<sup>-2</sup>]',
+    title_text=yaxislabel+' Downwelling LW Flux [W m<sup>-2</sup>]',
     range=[min_lwd, max_lwd],
     row=1, col=2)
 
-if prod == 'CRS4' or prod == 'SSF4A':
+if prod == 'CRS' or prod == 'SSF4A':
     sup_title_str = 'CERES ' + satellite + ' ' + flight_model + " " + \
                     prod + ' Surface Validation - ' + yr_mon +\
                     ' - ' + site_desc + ' - ' + day_str
-elif prod == 'FF3C' or prod == 'FF4A':
+elif prod == 'FF3C' or prod == 'FF4A_test':
     sup_title_str = 'FLASHFlux ' + 'V' + prod[-2:] + ' ' + satellite + ' ' \
                     + flight_model + ' Surface Validation - ' \
                     + yr_mon + ' - ' + site_desc + ' - ' + day_str
@@ -447,12 +465,12 @@ fig.add_trace(
     row=1, col=2)
 
 fig.update_xaxes(
-    title_text='Surface Observed Downwelling SW Flux [W m<sup>-2</sup>]',
+    title_text='Surface Measured Downwelling SW Flux [W m<sup>-2</sup>]',
     range=[min_swd, max_swd],
     row=1, col=2)
 
 fig.update_yaxes(
-    title_text=prod+' Downwelling SW Flux [W m<sup>-2</sup>]',
+    title_text=yaxislabel+' Downwelling SW Flux [W m<sup>-2</sup>]',
     range=[min_swd, max_swd],
     row=1, col=2)
 

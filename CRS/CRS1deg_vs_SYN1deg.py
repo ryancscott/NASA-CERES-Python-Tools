@@ -20,9 +20,9 @@ path2 = '/Users/rcscott2/Desktop/CERES/SYN1deg/'
 file2 = 'CER_SYN1deg-1Hour_Terra-Aqua-MODIS_Edition4A_407406.20190101'
 file_path2 = path2 + file2
 
-
+# 'obs_clr_toa_sw'
 var_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
-                                           var_name='init_clr_toa_lw_up',
+                                           var_name='init_clr_sfc_lw_dn',
                                            fill=False)
 
 lat_syn1deg, _, _ = ceres.read_syn1deg_hdf(file_path=file_path2,
@@ -81,24 +81,24 @@ for k in range(24):
     print(terra_crs_file)
     print(aqua_crs_file)
 
-    terra_lat_all, terra_lon_all, _, _, _, terra_sza_all = \
+    terra_lat_all, terra_lon_all, _, _, terra_sza_all = \
         ceres.read_crs_geolocation_dev(file_path=terra_crs_file)
 
     terra_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=terra_crs_file,
-            var_name='Longwave flux - upward - clear sky',
-            lev_arg=0,
+            var_name='Longwave flux - downward - clear sky',
+            lev_arg=5,
             fill=True)
 
-    aqua_lat_all, aqua_lon_all, _, _, _, aqua_sza_all = \
+    aqua_lat_all, aqua_lon_all, _, _, aqua_sza_all = \
         ceres.read_crs_geolocation_dev(file_path=aqua_crs_file)
 
     aqua_var_all, _, _, _ = \
         ceres.read_crs_var_dev(
             file_path=aqua_crs_file,
-            var_name='Longwave flux - upward - clear sky',
-            lev_arg=0,
+            var_name='Longwave flux - downward - clear sky',
+            lev_arg=5,
             fill=True)
 
     terra_lon_all = ceres.swath_lon_360_to_180(terra_lon_all)
@@ -148,7 +148,7 @@ aqua_only_mask = aqua_mask - both_mask
 terra_aqua_mask = terra_mask + aqua_mask
 
 
-for k in range(1):
+for k in range(0):
 
     if k < 10:
         j = '0' + str(k)
@@ -222,7 +222,7 @@ terra_diff[terra_aqua_mask == 2] = np.nan
 # plt.show()
 
 
-for k in range(1):
+for k in range(0):
 
     if k < 10:
         j = '0' + str(k)
@@ -233,7 +233,7 @@ for k in range(1):
         if i == 0:
             im = ax.imshow(terra_diff[k, :, :], vmin=-30, vmax=30)
             ax.set_title(r'Terra Only CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-                         r'Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
+                         r'LW$\downarrow$ Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
@@ -241,7 +241,7 @@ for k in range(1):
         elif i == 1:
             im = ax.imshow(aqua_diff[k, :, :], vmin=-30, vmax=30)
             ax.set_title(r'Aqua Only CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-                         r'Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
+                         r'LW$\downarrow$ Radiation [W m$^{-2}$], 1-1-2019:' + str(j) + 'h')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_xticks([])
@@ -261,9 +261,9 @@ aqua_mean_diff = np.nanmean(aqua_diff, axis=0)
 # combine fields into a single matrix to loop over figure axes
 field = np.stack((terra_mean_diff, aqua_mean_diff), axis=2)
 title_str = [r'Mean Nighttime $Terra$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h',
+             r'Clear-Sky Surface LW$\downarrow$ Radiation [W m$^{-2}$], 1-1-2019:00-23h',
              r'Mean Nighttime $Aqua$ $Only$ CRS1deg$_{\beta}$ minus SYN1deg' + '\n' +
-             r'Clear-Sky TOA Outgoing LW Radiation [W m$^{-2}$], 1-1-2019:00-23h'
+             r'Clear-Sky Surface LW$\downarrow$ Radiation [W m$^{-2}$], 1-1-2019:00-23h'
              ]
 
 
