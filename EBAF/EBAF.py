@@ -2,6 +2,7 @@
 # Developing code to manipulate/analyze gridded CERES data
 # ========================================================================
 
+import sys
 import cerestools as ceres
 
 # cmocean
@@ -23,11 +24,9 @@ print('====================================')
 print('\t\t\tEBAF file...\t\t\t')
 print('====================================')
 
-
 path = '/Users/rcscott2/Desktop/CERES/EBAF/'
 file = 'CERES_EBAF-TOA_Ed4.1_Subset_200003-201910.nc'
 file_path = path + file
-
 
 # ========================================================================
 
@@ -49,7 +48,6 @@ latitude, longitude, lat, lon, time = ceres.read_ebaf_geolocation(file_path=file
 
 start_mo, start_yr = ceres.read_ebaf_start_month_year(file_path=file_path)
 
-
 # -------------------------------------------------------
 # read variables including their name and units
 # -------------------------------------------------------
@@ -61,7 +59,6 @@ cep, cep_name, cep_units = ceres.read_ebaf_var(file_path=file_path, variable='cl
 cet, cet_name, cet_units = ceres.read_ebaf_var(file_path=file_path, variable='cldtemp_total_daynight_mon')
 tau, tau_name, tau_units = ceres.read_ebaf_var(file_path=file_path, variable='cldtau_total_day_mon')
 
-
 # -------------------------------------------------------
 # compute the long-term mean and standard deviation
 # -------------------------------------------------------
@@ -71,7 +68,6 @@ mean_tcf, sigma_tcf = ceres.compute_annual_climatology(tcf)
 mean_cep, sigma_cep = ceres.compute_annual_climatology(cep)
 mean_cet, sigma_cet = ceres.compute_annual_climatology(cet)
 mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
-
 
 # -------------------------------------------------------
 # plot map of climatology
@@ -84,6 +80,7 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 # ceres.global_map(lon=lon, lat=lat, field=mean_tcf,
 #                  varname=tcf_name, varunits=tcf_units, nrows=1, ncols=1, cen_lon=180,
 #                  cmap=cmap, cmap_lims=(0, 100), ti_str='CERES-EBAF Ed4.1')
+
 # #
 # ceres.global_map(lon=lon, lat=lat, field=mean_tau,
 #                   varname=tau_name, varunits=tau_units, nrows=1, ncols=1, cen_lon=180,
@@ -96,12 +93,11 @@ mean_tau, sigma_tau = ceres.compute_annual_climatology(tau)
 
 weights = ceres.cos_lat_weight(latitude)
 
-
 # -------------------------------------------------------
 # compute area-weighted averages of the long-term mean
 # -------------------------------------------------------
 
-#ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
+# ceres.compute_regional_averages(mean_field, latitude=latitude, w=w)
 
 # compute anomalies by removing long-term monthly means
 lwf_anomalies, lwf_seasonal_cycle = ceres.compute_monthly_anomalies(lwf, lwf_name)
@@ -140,6 +136,9 @@ tau_anomalies, tau_seasonal_cycle = ceres.compute_monthly_anomalies(tau, tau_nam
 # compute global mean time series
 # -------------------------------------------------------
 
+print(weights.shape)
+print(lwf.shape)
+
 global_mean_lwf = ceres.global_mean_time_series(field=lwf, weight=weights)
 
 global_mean_lwfa = ceres.global_mean_time_series(field=lwf_anomalies, weight=weights)
@@ -148,6 +147,6 @@ global_mean_lwfa = ceres.global_mean_time_series(field=lwf_anomalies, weight=wei
 # plot time series
 # -------------------------------------------------------
 
-ceres.plot_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
+ceres.plot_monthly_time_series(var=global_mean_lwf, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
 
-ceres.plot_time_series(var=global_mean_lwfa, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
+ceres.plot_monthly_time_series(var=global_mean_lwfa, name=lwf_name, units=r'W m$^{-2}$', start_mo=3, start_yr=2000)
